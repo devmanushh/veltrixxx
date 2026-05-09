@@ -53,7 +53,7 @@ export const ENV = {
   JWT_SECRET: valueOrDefault(process.env.JWT_SECRET, "veltrix-secret"),
   CORS_ORIGIN: valueOrDefault(process.env.CORS_ORIGIN, "http://localhost:3000"),
 
-  API_PORT: Number(process.env.API_PORT ?? 4000),
+  API_PORT: Number(process.env.API_PORT ?? process.env.PORT ?? 4000),
 
   APP_URL: valueOrDefault(process.env.APP_URL, "http://localhost:3000"),
   STRIPE_SECRET_KEY: valueOrDefault(process.env.STRIPE_SECRET_KEY, ""),

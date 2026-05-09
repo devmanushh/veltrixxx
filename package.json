@@ -10,7 +10,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:services && npm run build:web",
+    "build:services": "tsc",
     "dev": "npm run dev:infra && npm run wait:infra && npm run db:generate && npm run db:push && npm run dev:services",
     "dev:services": "concurrently -n web,api,engine -c blue,green,magenta \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:engine\"",
     "dev:infra": "docker compose up -d",
@@ -19,8 +20,10 @@
     "dev:api": "cd api-service && npm run dev",
     "dev:engine": "cd engine-service && npm run dev",
     "build:web": "cd web-service && npm run build",
+    "postinstall": "npm run db:generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
+    "start": "npm run start:web",
     "start:api": "node dist/api-service/index.js",
     "start:engine": "node dist/engine-service/index.js",
     "start:web": "cd web-service && npm run start",
@@ -55,5 +58,9 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@hono/node-server": "1.19.13",
+    "postcss": "8.5.10"
   }
 }
