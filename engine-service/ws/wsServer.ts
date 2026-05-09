@@ -3,7 +3,10 @@ import { getSnapshot } from "./snapshotCache.js";
 import { getSeq } from "./sequence.js";
 import { getCandlesBySymbol } from "../candles/candleStore.js";
 
-const wss = new WebSocketServer({ port: 8080 });
+const port = Number(process.env.WS_PORT ?? process.env.PORT ?? 8080);
+const wss = new WebSocketServer({ port });
+
+console.log(`WebSocket server running on port ${port}`);
 
 const clients: Map<string, Set<WebSocket>> = new Map();
 
