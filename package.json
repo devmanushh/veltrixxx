@@ -24,7 +24,6 @@
     "dev:api": "cd api-service && npm run dev",
     "dev:engine": "cd engine-service && npm run dev",
     "build:web": "cd web-service && npm run build",
-    "postinstall": "npm run db:generate",
     "db:generate": "prisma generate",
     "db:deploy": "prisma migrate deploy",
     "db:migrate:deploy": "prisma migrate deploy",
