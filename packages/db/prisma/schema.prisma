@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       String @id @default(cuid())
+  email    String @unique
+  password String
+  balance  Float  @default(0)
+
+  orders Order[]
+  buyerTrades  Trade[] @relation("BuyerTrades")
+  sellerTrades Trade[] @relation("SellerTrades")
+  topUps PaymentTopUp[]
+}
+
+model Order {
+  id     String @id @default(cuid())
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  symbol   String
+  price    Float?
+  quantity Float
+  side     String
+  type     String
+  status   String @default("OPEN")
+  createdAt DateTime @default(now())
+}
+
+model Trade {
+  id String @id @default(cuid())
+
+  buyerId  String
+  sellerId String
+
+  symbol   String
+  price    Float
+  quantity Float
+
+  createdAt DateTime @default(now())
+
+  buyer  User @relation("BuyerTrades", fields: [buyerId], references: [id])
+  seller User @relation("SellerTrades", fields: [sellerId], references: [id])
+}
+
+model PaymentTopUp {
+  id              String   @id @default(cuid())
+  stripeSessionId String   @unique
+  userId          String
+  amountUsd       Float
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}

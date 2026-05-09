@@ -1,0 +1,56 @@
+import express from "express";
+import cors from "cors";
+import authRoutes from "./auth/auth.routes.js";
+import orderRoutes from "./order/order.routes.js";
+import walletRoutes from "./wallet/wallet.routes.js";
+import activityRoutes from "./activity/activity.routes.js";
+import paymentRoutes from "./payments/payments.routes.js";
+import { handleStripeWebhook } from "./payments/payments.controller.js";
+import { ENV } from "../packages/config/env.js";
+import { db } from "../packages/db/client.js";
+
+const app = express();
+
+app.use(cors({
+  origin: ENV.CORS_ORIGIN.split(",").map((origin) => origin.trim()),
+  credentials: true,
+}));
+app.post("/payments/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
+app.use(express.json());
+
+app.use("/auth", authRoutes);
+app.use("/order", orderRoutes);
+app.use("/spot/:market/order", orderRoutes);
+app.use("/future/:market/order", orderRoutes);
+app.use("/wallet", walletRoutes);
+app.use("/activity", activityRoutes);
+app.use("/payments", paymentRoutes);
+
+app.get("/", (_, res) => {
+  res.json({
+    status: "ok",
+    service: "veltrix-api",
+    web: "http://localhost:3000",
+    health: "/health",
+  });
+});
+
+app.get("/health", (_, res) => {
+  res.send("API OK");
+});
+
+app.get("/health/db", async (_, res) => {
+  try {
+    await db.$queryRaw`SELECT 1`;
+    res.json({ status: "ok" });
+  } catch (err: any) {
+    res.status(500).json({
+      status: "error",
+      error: err.message || "Database unavailable",
+    });
+  }
+});
+
+app.listen(ENV.API_PORT, () => {
+  console.log(`API running on port ${ENV.API_PORT}`);
+});

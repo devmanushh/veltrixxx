@@ -1,0 +1,59 @@
+import { Market } from "./Market.js";
+import { Order } from "../engine/Order.js";
+import { Trade } from "../engine/Trade.js";
+
+export class MarketManager {
+  private markets: Map<string, Market> = new Map();
+
+  /**
+   * Get or create market
+   */
+  private getMarket(symbol: string): Market {
+    let market = this.markets.get(symbol);
+
+    if (!market) {
+      market = new Market(symbol);
+      this.markets.set(symbol, market);
+      console.log(`📈 Market created: ${symbol}`);
+    }
+
+    return market;
+  }
+
+  /**
+   * Process incoming order
+   */
+  process(order: Order): {
+    trades: Trade[];
+    remainingOrder: Order | null;
+  } {
+    const market = this.getMarket(order.symbol);
+
+    return market.processOrder(order);
+  }
+
+  /**
+   * Cancel order
+   */
+  cancel(symbol: string, orderId: number): boolean {
+    const market = this.markets.get(symbol);
+    if (!market) return false;
+
+    return market.cancelOrder(orderId);
+  }
+
+  /**
+   * Debug / future use
+   */
+  getMarketSnapshot(symbol: string) {
+    return this.markets.get(symbol)?.getOrderBook();
+  }
+
+  addOrderDirect(order: Order) {
+  const market = this.getMarket(order.symbol);
+  market.addOrderDirect(order);
+}
+
+}
+
+export const marketManager = new MarketManager();

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "@veltrix/*": ["packages/*"],
+      "@/*": ["web-service/*"]
+    },
+
+    "strict": true,
+    "skipLibCheck": true,
+    "rootDir": ".",
+    "outDir": "dist"
+  },
+
+  "include": [
+    "api-service/**/*",
+    "engine-service/**/*",
+    "packages/**/*"
+  ]
+}

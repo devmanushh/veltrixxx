@@ -1,0 +1,52 @@
+{
+  "name": "veltrix",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "web-service",
+    "api-service",
+    "engine-service",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "npm run dev:infra && npm run wait:infra && npm run db:generate && npm run db:push && npm run dev:services",
+    "dev:services": "concurrently -n web,api,engine -c blue,green,magenta \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:engine\"",
+    "dev:infra": "docker compose up -d",
+    "wait:infra": "node scripts/wait-for-infra.mjs",
+    "dev:web": "cd web-service && npm run dev",
+    "dev:api": "cd api-service && npm run dev",
+    "dev:engine": "cd engine-service && npm run dev",
+    "build:web": "cd web-service && npm run build",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "start:api": "node dist/api-service/index.js",
+    "start:engine": "node dist/engine-service/index.js",
+    "start:web": "cd web-service && npm run start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@prisma/extension-accelerate": "^3.0.1",
+    "ioredis": "^5.10.1",
+    "next": "16.2.4",
+    "pg": "^8.20.0",
+    "prisma": "^7.8.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "redis": "^5.12.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
