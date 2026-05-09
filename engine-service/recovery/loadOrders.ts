@@ -1,5 +1,6 @@
 import { db } from "../../packages/db/client.js";
 import { Order } from "../engine/Order.js";
+import type { Order as DbOrder } from "@prisma/client";
 
 const toEngineOrderId = (orderId: string) => {
   const parsed = Number.parseInt(orderId.replace(/\D/g, ""), 10);
@@ -14,7 +15,7 @@ export const loadOpenOrders = async (): Promise<Order[]> => {
   });
 
   return orders.map(
-    (o) =>
+    (o: DbOrder) =>
       new Order({
         id: toEngineOrderId(o.id),
         dbId: o.id,
