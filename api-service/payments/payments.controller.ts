@@ -1,8 +1,7 @@
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
-import type { Prisma } from "@prisma/client";
 import { ENV } from "../../packages/config/env.js";
-import { db } from "../../packages/db/client.js";
+import { db, type DbTransactionClient } from "../../packages/db/client.js";
 
 const getStripeSession = async (sessionId: string) => {
   const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
@@ -30,7 +29,7 @@ const creditCompletedStripeSession = async (session: any) => {
     throw new Error("Stripe session is not paid yet");
   }
 
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+  return db.$transaction(async (tx: DbTransactionClient) => {
     const existingTopUp = await tx.paymentTopUp.findUnique({
       where: { stripeSessionId: sessionId },
     });

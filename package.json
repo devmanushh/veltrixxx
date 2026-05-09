@@ -14,7 +14,7 @@
     "build:api": "npm run build:services",
     "build:engine": "npm run build:services",
     "build:server": "npm run build:services",
-    "build:services": "tsc",
+    "build:services": "prisma generate && tsc",
     "build:worker": "npm run build:engine",
     "dev": "npm run dev:infra && npm run wait:infra && npm run db:generate && npm run db:push && npm run dev:services",
     "dev:services": "concurrently -n web,api,engine -c blue,green,magenta \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:engine\"",

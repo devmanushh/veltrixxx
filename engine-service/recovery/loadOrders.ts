@@ -1,6 +1,7 @@
 import { db } from "../../packages/db/client.js";
 import { Order } from "../engine/Order.js";
-import type { Order as DbOrder } from "@prisma/client";
+
+type DbOrder = Awaited<ReturnType<typeof db.order.findMany>>[number];
 
 const toEngineOrderId = (orderId: string) => {
   const parsed = Number.parseInt(orderId.replace(/\D/g, ""), 10);

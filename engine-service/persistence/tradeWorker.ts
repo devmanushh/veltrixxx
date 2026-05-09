@@ -1,6 +1,5 @@
 import { Redis } from "ioredis";
-import type { Prisma } from "@prisma/client";
-import { db } from "../../packages/db/client.js";
+import { db, type DbTransactionClient } from "../../packages/db/client.js";
 import { ENV } from "../../packages/config/env.js";
 
 const sub = new Redis(ENV.REDIS_URL, {
@@ -33,7 +32,7 @@ sub.on("message", async (_: string, message: string) => {
     const buyOrderStatus = trade.buyOrderRemaining > 0 ? "PARTIALLY_FILLED" : "FILLED";
     const sellOrderStatus = trade.sellOrderRemaining > 0 ? "PARTIALLY_FILLED" : "FILLED";
 
-    await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await db.$transaction(async (tx: DbTransactionClient) => {
       await tx.trade.create({
         data: {
           id: trade.id.toString(),

@@ -1,8 +1,7 @@
 import { sendOrderToEngine } from "./order.producer.js"; // or same file
-import { db } from "../../packages/db/client.js";
+import { db, type DbTransactionClient } from "../../packages/db/client.js";
 import { ValidationError } from "../../packages/errors/index.js";
 import type { Order } from "../../packages/types/index.js";
-import type { Prisma } from "@prisma/client";
 
 
 export const placeOrderService = async (order: Order) => {
@@ -72,7 +71,7 @@ export const cancelOrderService = async (input: {
   orderId: string;
   userId: string;
 }) => {
-  return db.$transaction(async (tx: Prisma.TransactionClient) => {
+  return db.$transaction(async (tx: DbTransactionClient) => {
     const order = await tx.order.findUnique({
       where: { id: input.orderId },
     });

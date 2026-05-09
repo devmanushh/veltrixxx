@@ -37,6 +37,8 @@ export const db =
     adapter,
   });
 
+export type DbTransactionClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
+
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = db;
 }
