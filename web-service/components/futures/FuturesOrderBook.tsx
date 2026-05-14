@@ -1,41 +1,66 @@
-import type { MarketConfig } from "@veltrix/config/markets";
+"use client";
 
-type FuturesOrderBookProps = {
-  market: MarketConfig;
-};
+import { useEffect, useMemo } from "react";
+import { EMPTY_ORDER_BOOK, useLiveMarketStore } from "@/stores/liveMarketStore";
+import { useSelectedMarket } from "@/stores/marketStore";
 
-export default function FuturesOrderBook({ market }: FuturesOrderBookProps) {
-  const mid = Number(market.price.replace(/,/g, ""));
-  const format = (value: number) =>
-    value.toLocaleString("en-US", {
-      minimumFractionDigits: mid > 1000 ? 1 : 2,
-      maximumFractionDigits: mid > 1000 ? 1 : 2,
-    });
-  const levels = [
-    { price: format(mid * 1.003), size: "1.20", side: "ask" },
-    { price: format(mid * 1.002), size: "0.74", side: "ask" },
-    { price: format(mid * 0.999), size: "2.60", side: "bid" },
-    { price: format(mid * 0.998), size: "0.95", side: "bid" },
-  ];
+const formatPrice = (value: number) =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: value > 1000 ? 1 : 2,
+    maximumFractionDigits: value > 1000 ? 1 : 2,
+  });
+
+const formatSize = (value: number) =>
+  value.toLocaleString("en-US", {
+    maximumFractionDigits: 8,
+  });
+
+export default function FuturesOrderBook() {
+  const market = useSelectedMarket("futures");
+  const subscribe = useLiveMarketStore((state) => state.subscribe);
+  const unsubscribe = useLiveMarketStore((state) => state.unsubscribe);
+  const book = useLiveMarketStore((state) => state.orderBooks[market.symbol]) || EMPTY_ORDER_BOOK;
+  const bids = book.bids;
+  const asks = book.asks;
+
+  useEffect(() => {
+    subscribe(market.symbol);
+    return () => unsubscribe(market.symbol);
+  }, [market.symbol, subscribe, unsubscribe]);
+
+  const levels = useMemo(() => {
+    const topAsks = [...asks]
+      .sort(([a], [b]) => a - b)
+      .slice(0, 4)
+      .reverse()
+      .map(([price, size]) => ({ price, size, side: "ask" as const }));
+    const topBids = [...bids]
+      .sort(([a], [b]) => b - a)
+      .slice(0, 4)
+      .map(([price, size]) => ({ price, size, side: "bid" as const }));
+
+    return [...topAsks, ...topBids];
+  }, [asks, bids]);
 
   return (
-    <div style={{ padding: 12, display: "grid", gap: 10 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", color: "#71717a", fontSize: 12 }}>
+    <div className="orderbook book-table">
+      <div className="book-head">
         <span>Price</span>
-        <span style={{ textAlign: "right" }}>Contracts</span>
+        <span className="align-right">Contracts</span>
       </div>
-      {levels.map(({ price, size, side }, index) => (
+      {levels.length === 0 && (
+        <div className="book-row text-muted">
+          <span>No open orders</span>
+          <span className="align-right">-</span>
+        </div>
+      )}
+      {levels.map(({ price, size, side }) => (
         <div
-          key={`${market.symbol}-${side}-${index}`}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            color: side === "bid" ? "#22c55e" : "#ef4444",
-            fontSize: 13,
-          }}
+          key={`${market.symbol}-${side}-${price}`}
+          className={side === "bid" ? "book-row market-green" : "book-row market-red"}
         >
-          <span>{price}</span>
-          <span style={{ textAlign: "right", color: "#d4d4d8" }}>{size}</span>
+          <span>{formatPrice(price)}</span>
+          <span className="align-right text-strong">{formatSize(size)}</span>
         </div>
       ))}
     </div>

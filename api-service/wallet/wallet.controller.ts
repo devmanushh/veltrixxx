@@ -15,6 +15,16 @@ export const getWallet = async (req: Request, res: Response) => {
         id: true,
         email: true,
         balance: true,
+        assetBalances: {
+          select: {
+            asset: true,
+            free: true,
+            locked: true,
+          },
+          orderBy: {
+            asset: "asc",
+          },
+        },
       },
     });
 

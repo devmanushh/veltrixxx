@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { clearAuthSession, setAuthCookie } from "@/lib/auth";
-import { registerUser } from "@/services/api";
+import { registerUser } from "@/lib/api";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function RegisterForm() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       setAuthCookie(data.token);
+      toast.success("Account created");
 
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
@@ -37,6 +39,7 @@ export default function RegisterForm() {
       router.refresh();
     } catch (err: any) {
       setError(err.message);
+      toast.error("Registration failed", { description: err.message });
     } finally {
       setLoading(false);
     }
@@ -45,19 +48,15 @@ export default function RegisterForm() {
   return (
     <form
       onSubmit={handleRegister}
-      style={{
-        width: "min(100%, 380px)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-      }}
+      className="glass-panel auth-card"
     >
-      <h1 style={{ fontSize: 28, fontWeight: 700 }}>Register</h1>
+      <h1 className="auth-title">Register</h1>
+      <p>“Don&apos;t watch the market. Own it.”</p>
 
       <input
         type="email"
         placeholder="Email"
-        style={{ width: "100%", padding: 12, border: "1px solid #d1d5db", borderRadius: 6 }}
+        className="form-input auth-input"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
@@ -65,7 +64,7 @@ export default function RegisterForm() {
       <input
         type="password"
         placeholder="Password"
-        style={{ width: "100%", padding: 12, border: "1px solid #d1d5db", borderRadius: 6 }}
+        className="form-input auth-input"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
@@ -73,24 +72,16 @@ export default function RegisterForm() {
       <button
         type="submit"
         disabled={loading}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 6,
-          background: "#111827",
-          color: "white",
-          border: 0,
-          cursor: loading ? "default" : "pointer",
-        }}
+        className="primary-button"
       >
         {loading ? "Registering..." : "Register"}
       </button>
 
-      {error && <p style={{ color: "#dc2626", marginTop: 0 }}>{error}</p>}
+      {error && <p className="text-danger">{error}</p>}
 
-      <p style={{ fontSize: 14 }}>
+      <p className="text-muted">
         Already have an account?{" "}
-        <a href="/login" style={{ color: "#2563eb" }}>
+        <a href="/login" className="text-success">
           Login
         </a>
       </p>

@@ -2,6 +2,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import { getSnapshot } from "./snapshotCache.js";
 import { getSeq } from "./sequence.js";
 import { getCandlesBySymbol } from "../candles/candleStore.js";
+import { getRecentTrades } from "./tradeCache.js";
 
 const port = Number(process.env.WS_PORT ?? process.env.PORT ?? 8080);
 const wss = new WebSocketServer({ port });
@@ -48,6 +49,13 @@ wss.on("connection", (ws: WebSocket) => {
     JSON.stringify({
       type: "CANDLE_SNAPSHOT",
       data: getCandlesBySymbol(subscribedSymbol),
+    })
+  );
+
+  ws.send(
+    JSON.stringify({
+      type: "TRADE_SNAPSHOT",
+      data: getRecentTrades(subscribedSymbol),
     })
   );
 }

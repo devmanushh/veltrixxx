@@ -1,5 +1,8 @@
-import PositionPage from "@/features/pages/PositionPage";
-
 export default function Page() {
-  return <PositionPage />;
+  return (
+    <section className="exchange-panel full-width-panel">
+      <h1 className="panel-heading">Positions</h1>
+      <p className="section-copy">No open positions.</p>
+    </section>
+  );
 }

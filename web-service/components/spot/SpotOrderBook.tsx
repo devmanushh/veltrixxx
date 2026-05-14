@@ -1,51 +1,72 @@
-import type { MarketConfig } from "@veltrix/config/markets";
+"use client";
 
-type SpotOrderBookProps = {
-  market: MarketConfig;
-};
+import { useEffect, useMemo } from "react";
+import { EMPTY_ORDER_BOOK, useLiveMarketStore } from "@/stores/liveMarketStore";
+import { useSelectedMarket } from "@/stores/marketStore";
 
-const makeLevels = (price: string) => {
-  const mid = Number(price.replace(/,/g, ""));
-  const format = (value: number) =>
-    value.toLocaleString("en-US", {
-      minimumFractionDigits: mid > 1000 ? 1 : 2,
-      maximumFractionDigits: mid > 1000 ? 1 : 2,
-    });
+const formatPrice = (value: number) =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: value > 1000 ? 1 : 2,
+    maximumFractionDigits: value > 1000 ? 1 : 2,
+  });
 
-  return {
-    asks: [
-      [format(mid * 1.003), "0.42"],
-      [format(mid * 1.002), "0.18"],
-      [format(mid * 1.001), "1.25"],
-    ],
-    bids: [
-      [format(mid * 0.999), "0.64"],
-      [format(mid * 0.998), "0.91"],
-      [format(mid * 0.997), "1.70"],
-    ],
-  };
-};
+const formatSize = (value: number) =>
+  value.toLocaleString("en-US", {
+    maximumFractionDigits: 8,
+  });
 
-export default function SpotOrderBook({ market }: SpotOrderBookProps) {
-  const { asks, bids } = makeLevels(market.price);
+export default function SpotOrderBook() {
+  const market = useSelectedMarket("spot");
+  const subscribe = useLiveMarketStore((state) => state.subscribe);
+  const unsubscribe = useLiveMarketStore((state) => state.unsubscribe);
+  const book = useLiveMarketStore((state) => state.orderBooks[market.symbol]) || EMPTY_ORDER_BOOK;
+  const bids = book.bids;
+  const asks = book.asks;
+
+  useEffect(() => {
+    subscribe(market.symbol);
+    return () => unsubscribe(market.symbol);
+  }, [market.symbol, subscribe, unsubscribe]);
+
+  const sortedAsks = useMemo(
+    () => [...asks].sort(([a], [b]) => a - b).slice(0, 8).reverse(),
+    [asks]
+  );
+  const sortedBids = useMemo(
+    () => [...bids].sort(([a], [b]) => b - a).slice(0, 8),
+    [bids]
+  );
+  const bestPrice = sortedAsks[0]?.[0] || sortedBids[0]?.[0] || null;
 
   return (
-    <div style={{ padding: 12, display: "grid", gap: 10 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", color: "#71717a", fontSize: 12 }}>
+    <div className="orderbook book-table">
+      <div className="book-head">
         <span>Price</span>
-        <span style={{ textAlign: "right" }}>Size</span>
+        <span className="align-right">Size</span>
       </div>
-      {asks.map(([price, size], index) => (
-        <div key={`${market.symbol}-ask-${index}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", color: "#ef4444", fontSize: 13 }}>
-          <span>{price}</span>
-          <span style={{ textAlign: "right", color: "#d4d4d8" }}>{size}</span>
+      {sortedAsks.length === 0 && (
+        <div className="book-row text-muted">
+          <span>No asks</span>
+          <span className="align-right">-</span>
+        </div>
+      )}
+      {sortedAsks.map(([price, size]) => (
+        <div key={`${market.symbol}-ask-${price}`} className="book-row market-red">
+          <span>{formatPrice(price)}</span>
+          <span className="align-right text-strong">{formatSize(size)}</span>
         </div>
       ))}
-      <strong style={{ color: "#f4f4f5", fontSize: 18 }}>{market.price}</strong>
-      {bids.map(([price, size], index) => (
-        <div key={`${market.symbol}-bid-${index}`} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", color: "#22c55e", fontSize: 13 }}>
-          <span>{price}</span>
-          <span style={{ textAlign: "right", color: "#d4d4d8" }}>{size}</span>
+      <strong className="market-price">{bestPrice ? formatPrice(bestPrice) : "No live book"}</strong>
+      {sortedBids.length === 0 && (
+        <div className="book-row text-muted">
+          <span>No bids</span>
+          <span className="align-right">-</span>
+        </div>
+      )}
+      {sortedBids.map(([price, size]) => (
+        <div key={`${market.symbol}-bid-${price}`} className="book-row market-green">
+          <span>{formatPrice(price)}</span>
+          <span className="align-right text-strong">{formatSize(size)}</span>
         </div>
       ))}
     </div>

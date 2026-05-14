@@ -14,7 +14,7 @@ export default function Logo() {
   }, []);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <div className="brand-logo">
       <svg width="38" height="38" viewBox="0 0 100 100">
         <defs>
           <linearGradient id="veltrixGradient" x1="0" y1="0" x2="1" y2="1">
@@ -51,11 +51,7 @@ export default function Logo() {
           strokeLinecap="round"
           strokeLinejoin="round"
           filter="url(#glow)"
-          style={{
-            transform: pulse ? "scale(1.03)" : "scale(1)",
-            transformOrigin: "center",
-            transition: "all 0.6s ease",
-          }}
+          className={pulse ? "brand-mark-path brand-mark-path-active" : "brand-mark-path"}
         />
 
         {/* Core dot */}
@@ -65,30 +61,17 @@ export default function Logo() {
           r="4"
           fill="#00ffcc"
           opacity={pulse ? 1 : 0.6}
-          style={{ transition: "all 0.6s ease" }}
+          className="brand-mark-dot"
         />
       </svg>
 
-      <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-        <span
-          style={{
-            fontSize: 16,
-            fontWeight: 700,
-            letterSpacing: "2px",
-            color: "#ffffff",
-          }}
-        >
+      <div className="brand-mark-copy">
+        <span className="brand-name">
           VELTRIX
         </span>
 
-        <span
-          style={{
-            fontSize: 15,
-            color: "#8b8b8b",
-            letterSpacing: "1px",
-          }}
-        >
-          VELTRIXXX
+        <span className="brand-subtitle">
+          Trading made easy
         </span>
       </div>
     </div>

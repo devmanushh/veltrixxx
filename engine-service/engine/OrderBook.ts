@@ -80,6 +80,11 @@ export class OrderBook {
 
       // ✅ emit correct diff
       this.emitLevelUpdate(side, level);
+
+      if (level.isEmpty()) {
+        const tree = side === "BUY" ? this.bids : this.asks;
+        tree.delete(level.price);
+      }
     }
 
     return removed;
@@ -112,6 +117,10 @@ export class OrderBook {
 
       // ✅ emit diff after match
       this.emitLevelUpdate("BUY", level);
+
+      if (level.isEmpty()) {
+        this.bids.delete(level.price);
+      }
     }
 
     return order;
@@ -128,6 +137,10 @@ export class OrderBook {
 
       // ✅ emit diff after match
       this.emitLevelUpdate("SELL", level);
+
+      if (level.isEmpty()) {
+        this.asks.delete(level.price);
+      }
     }
 
     return order;

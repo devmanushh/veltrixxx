@@ -16,6 +16,7 @@ model User {
   buyerTrades  Trade[] @relation("BuyerTrades")
   sellerTrades Trade[] @relation("SellerTrades")
   topUps PaymentTopUp[]
+  assetBalances AssetBalance[]
 }
 
 model Order {
@@ -26,10 +27,25 @@ model Order {
   symbol   String
   price    Float?
   quantity Float
+  remaining Float @default(0)
+  lockedQuote Float @default(0)
+  lockedBase Float @default(0)
   side     String
   type     String
   status   String @default("OPEN")
   createdAt DateTime @default(now())
+}
+
+model AssetBalance {
+  id     String @id @default(cuid())
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+
+  asset  String
+  free   Float @default(0)
+  locked Float @default(0)
+
+  @@unique([userId, asset])
 }
 
 model Trade {

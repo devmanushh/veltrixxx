@@ -1,59 +1,38 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { useState } from "react";
+import type { MarketKind } from "@veltrix/config/markets";
+import SpotOrderBook from "@/components/spot/SpotOrderBook";
+import SpotTrades from "@/components/spot/SpotTrades";
+import FuturesOrderBook from "@/components/futures/FuturesOrderBook";
+import FuturesTrades from "@/components/futures/FuturesTrades";
 
 type MarketActivityPanelProps = {
-  orderBook: ReactNode;
-  trades: ReactNode;
+  marketKind: MarketKind;
 };
 
 export default function MarketActivityPanel({
-  orderBook,
-  trades,
+  marketKind,
 }: MarketActivityPanelProps) {
   const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook");
-
-  const tabStyle = (tab: "orderbook" | "trades") => ({
-    flex: 1,
-    height: 34,
-    border: 0,
-    borderRadius: 6,
-    background: activeTab === tab ? "#2563eb" : "transparent",
-    color: activeTab === tab ? "#ffffff" : "#a1a1aa",
-    fontWeight: 700,
-    cursor: "pointer",
-  });
+  const orderBook = marketKind === "spot" ? <SpotOrderBook /> : <FuturesOrderBook />;
+  const trades = marketKind === "spot" ? <SpotTrades /> : <FuturesTrades />;
 
   return (
     <section
-      style={{
-        minHeight: 0,
-        display: "grid",
-        gridTemplateRows: "44px minmax(0, 1fr)",
-        border: "1px solid var(--app-border, #20242d)",
-        borderRadius: 8,
-        background: "var(--app-panel, #11141c)",
-        overflow: "hidden",
-      }}
+      className="exchange-panel activity-panel"
     >
       <div
         role="tablist"
         aria-label="Market activity"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          padding: 5,
-          borderBottom: "1px solid var(--app-border, #20242d)",
-          background: "#0f1219",
-        }}
+        className="activity-tabs"
       >
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === "orderbook"}
           onClick={() => setActiveTab("orderbook")}
-          style={tabStyle("orderbook")}
+          className={activeTab === "orderbook" ? "tab-button tab-button-active" : "tab-button"}
         >
           Order Book
         </button>
@@ -62,13 +41,13 @@ export default function MarketActivityPanel({
           role="tab"
           aria-selected={activeTab === "trades"}
           onClick={() => setActiveTab("trades")}
-          style={tabStyle("trades")}
+          className={activeTab === "trades" ? "tab-button tab-button-active" : "tab-button"}
         >
           Trades
         </button>
       </div>
 
-      <div style={{ minHeight: 0, overflow: "auto" }}>
+      <div className="activity-body">
         {activeTab === "orderbook" ? orderBook : trades}
       </div>
     </section>

@@ -118,6 +118,7 @@ export class MatchingEngine {
         sellOrderDbId: maker.dbId,
         buyOrderRemaining: taker.remaining,
         sellOrderRemaining: maker.remaining,
+        side: "BUY",
         timestamp: Date.now()
       });
 
@@ -169,6 +170,7 @@ export class MatchingEngine {
         sellOrderDbId: taker.dbId,
         buyOrderRemaining: maker.remaining,
         sellOrderRemaining: taker.remaining,
+        side: "SELL",
         timestamp: Date.now()
       });
 

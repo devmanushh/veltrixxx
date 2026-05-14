@@ -1,5 +1,5 @@
-import SpotPage from "@/features/pages/SpotPage";
+import SpotTradingPage from "@/components/spot/SpotTradingPage";
 
 export default function Page() {
-  return <SpotPage />;
+  return <SpotTradingPage />;
 }

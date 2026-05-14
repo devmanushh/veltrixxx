@@ -1,42 +1,49 @@
-import type { MarketConfig } from "@veltrix/config/markets";
+"use client";
 
-type FuturesTradesProps = {
-  market: MarketConfig;
-};
+import { useEffect } from "react";
+import { EMPTY_TRADES, useLiveMarketStore } from "@/stores/liveMarketStore";
+import { useSelectedMarket } from "@/stores/marketStore";
 
-const makeTrades = (market: MarketConfig) => {
-  const mid = Number(market.price.replace(/,/g, ""));
-  const format = (value: number) =>
-    value.toLocaleString("en-US", {
-      minimumFractionDigits: mid > 1000 ? 1 : 2,
-      maximumFractionDigits: mid > 1000 ? 1 : 2,
-    });
+const formatPrice = (value: number) =>
+  value.toLocaleString("en-US", {
+    minimumFractionDigits: value > 1000 ? 1 : 2,
+    maximumFractionDigits: value > 1000 ? 1 : 2,
+  });
 
-  return [
-    [format(mid * 1.0001), "0.420", "Long"],
-    [format(mid * 0.9999), "0.180", "Short"],
-    [format(mid * 0.9997), "1.250", "Long"],
-    [format(mid * 0.9994), "0.760", "Short"],
-  ];
-};
+const formatSize = (value: number) =>
+  value.toLocaleString("en-US", {
+    maximumFractionDigits: 8,
+  });
 
-export default function FuturesTrades({ market }: FuturesTradesProps) {
-  const trades = makeTrades(market);
+export default function FuturesTrades() {
+  const market = useSelectedMarket("futures");
+  const subscribe = useLiveMarketStore((state) => state.subscribe);
+  const unsubscribe = useLiveMarketStore((state) => state.unsubscribe);
+  const trades = useLiveMarketStore((state) => state.trades[market.symbol]) || EMPTY_TRADES;
+
+  useEffect(() => {
+    subscribe(market.symbol);
+    return () => unsubscribe(market.symbol);
+  }, [market.symbol, subscribe, unsubscribe]);
+
   return (
-    <div style={{ padding: 12, display: "grid", gap: 10 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", color: "#71717a", fontSize: 12 }}>
+    <div className="orderbook trades-table">
+      <div className="trades-head">
         <span>Price</span>
         <span>Size</span>
         <span>Side</span>
       </div>
-      {trades.map(([price, size, side], index) => (
+      {trades.length === 0 && <span className="text-muted">No trades yet.</span>}
+      {trades.map((trade) => (
         <div
-          key={`${market.symbol}-trade-${index}`}
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", color: "#d4d4d8", fontSize: 13 }}
+          key={`${market.symbol}-trade-${trade.id}`}
+          className="trades-row text-strong"
         >
-          <span style={{ color: side === "Long" ? "#22c55e" : "#ef4444" }}>{price}</span>
-          <span>{size}</span>
-          <span>{side}</span>
+          <span className={trade.side === "BUY" ? "market-green" : "market-red"}>
+            {formatPrice(trade.price)}
+          </span>
+          <span>{formatSize(trade.quantity)}</span>
+          <span>{trade.side === "BUY" ? "Long" : "Short"}</span>
         </div>
       ))}
     </div>

@@ -1,4 +1,4 @@
-import SpotPage from "@/features/pages/SpotPage";
+import SpotTradingPage from "@/components/spot/SpotTradingPage";
 
 type PageProps = {
   params: Promise<{
@@ -9,5 +9,5 @@ type PageProps = {
 export default async function Page({ params }: PageProps) {
   const { market } = await params;
 
-  return <SpotPage marketParam={market} />;
+  return <SpotTradingPage marketParam={market} />;
 }

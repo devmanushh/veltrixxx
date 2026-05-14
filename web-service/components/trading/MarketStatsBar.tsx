@@ -1,86 +1,64 @@
 "use client";
 
-import type { MarketConfig } from "@veltrix/config/markets";
+import { getMarketsByKind, type MarketKind } from "@veltrix/config/markets";
+import { useEffect } from "react";
+import { EMPTY_ORDER_BOOK, EMPTY_TRADES, useLiveMarketStore } from "@/stores/liveMarketStore";
+import { useSelectedMarket } from "@/stores/marketStore";
 
 type MarketStatsBarProps = {
-  markets: MarketConfig[];
-  selectedMarket: MarketConfig;
+  marketKind: MarketKind;
   onMarketChange: (symbol: string) => void;
 };
 
-const statStyle = {
-  display: "grid",
-  gap: 4,
-  minWidth: 110,
-};
-
-const coinColors: Record<string, string> = {
-  BTC: "#f59e0b",
-  ETH: "#8b5cf6",
-  SOL: "#14f195",
-  XRP: "#94a3b8",
-  DOGE: "#d6a84f",
-  ADA: "#3b82f6",
-  AVAX: "#ef4444",
-  LINK: "#2563eb",
-  SUI: "#38bdf8",
-  BNB: "#f3ba2f",
-};
-
 export default function MarketStatsBar({
-  markets,
-  selectedMarket,
+  marketKind,
   onMarketChange,
 }: MarketStatsBarProps) {
-  const coinColor = coinColors[selectedMarket.base] || "#f59e0b";
+  const selectedMarket = useSelectedMarket(marketKind);
+  const markets = getMarketsByKind(marketKind);
+  const subscribe = useLiveMarketStore((state) => state.subscribe);
+  const unsubscribe = useLiveMarketStore((state) => state.unsubscribe);
+  const trades = useLiveMarketStore((state) => state.trades[selectedMarket.symbol]) || EMPTY_TRADES;
+  const book = useLiveMarketStore((state) => state.orderBooks[selectedMarket.symbol]) || EMPTY_ORDER_BOOK;
+  const latestTrade = trades[0];
+  const bestAsk = book?.asks.slice().sort(([a], [b]) => a - b)[0]?.[0] || null;
+  const bestBid = book?.bids.slice().sort(([a], [b]) => b - a)[0]?.[0] || null;
+  const referencePrice = latestTrade?.price || (bestAsk && bestBid ? (bestAsk + bestBid) / 2 : bestAsk || bestBid);
+  const sessionPrices = trades.map((trade) => trade.price);
+  const high = sessionPrices.length ? Math.max(...sessionPrices) : null;
+  const low = sessionPrices.length ? Math.min(...sessionPrices) : null;
+  const volume = trades.reduce((sum, trade) => sum + trade.price * trade.quantity, 0);
+  const change = trades.length > 1 ? trades[0].price - trades[trades.length - 1].price : null;
+  const changePercent = change && trades[trades.length - 1]?.price
+    ? (change / trades[trades.length - 1].price) * 100
+    : null;
+
+  useEffect(() => {
+    subscribe(selectedMarket.symbol);
+    return () => unsubscribe(selectedMarket.symbol);
+  }, [selectedMarket.symbol, subscribe, unsubscribe]);
+
+  const formatPrice = (value: number | null | undefined) =>
+    typeof value === "number"
+      ? value.toLocaleString("en-US", {
+          maximumFractionDigits: value >= 1000 ? 1 : 4,
+        })
+      : "-";
 
   return (
-    <section
-      style={{
-        height: 76,
-        display: "flex",
-        alignItems: "center",
-        gap: 24,
-        padding: "0 16px",
-        border: "1px solid var(--app-border, #20242d)",
-        borderRadius: 8,
-        background: "var(--app-panel, #11141c)",
-        overflow: "hidden",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 330 }}>
-        <div
-          aria-hidden="true"
-          style={{
-            width: 40,
-            height: 40,
-            display: "grid",
-            placeItems: "center",
-            borderRadius: "50%",
-            border: `1px solid ${coinColor}`,
-            background: selectedMarket.base === "BTC" ? "#f7931a" : "rgba(255,255,255,0.04)",
-            color: selectedMarket.base === "BTC" ? "#111827" : coinColor,
-            fontWeight: 900,
-            fontSize: selectedMarket.base === "BTC" ? 12 : 13,
-          }}
-        >
-          {selectedMarket.base === "BTC" ? "BTC" : selectedMarket.base.slice(0, 3)}
+    <section className="exchange-panel market-bar">
+      <div className="market-identity">
+        <div aria-hidden="true" className="coin-badge">
+          {selectedMarket.base.slice(0, 3)}
         </div>
-        <div style={{ display: "grid", gap: 4 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            <strong style={{ fontSize: 16 }}>{selectedMarket.displaySymbol}</strong>
+        <div className="market-title-block">
+          <div className="market-select-row">
+            <strong className="text-strong">{selectedMarket.displaySymbol}</strong>
             <select
               value={selectedMarket.symbol}
               onChange={(event) => onMarketChange(event.target.value)}
               aria-label="Select market"
-              style={{
-                height: 30,
-                border: "1px solid var(--app-border, #20242d)",
-                borderRadius: 6,
-                background: "#0b0e11",
-                color: "#f4f4f5",
-                padding: "0 8px",
-              }}
+              className="market-select"
             >
               {markets.map((market) => (
                 <option key={market.symbol} value={market.symbol}>
@@ -89,41 +67,32 @@ export default function MarketStatsBar({
               ))}
             </select>
             {selectedMarket.leverage && (
-              <span
-                style={{
-                  padding: "2px 7px",
-                  borderRadius: 5,
-                  background: "#1f2937",
-                  color: "#cbd5e1",
-                  fontSize: 12,
-                  fontWeight: 800,
-                }}
-              >
+              <span className="leverage-badge">
                 {selectedMarket.leverage}
               </span>
             )}
           </div>
-          <strong style={{ color: "#f4f4f5", fontSize: 22 }}>{selectedMarket.price}</strong>
+          <strong className="market-num market-price">{formatPrice(referencePrice)}</strong>
         </div>
       </div>
 
-      <div style={statStyle}>
-        <span style={{ color: "#71717a", fontSize: 12 }}>24H Change</span>
-        <strong style={{ color: "#22c55e", fontSize: 13 }}>
-          {selectedMarket.stats.change} {selectedMarket.stats.changePercent}
+      <div className="market-stat">
+        <span className="stat-label">Session Change</span>
+        <strong className={`${(change || 0) >= 0 ? "market-green" : "market-red"} market-num stat-value`}>
+          {change === null ? "-" : `${formatPrice(change)} ${changePercent === null ? "" : `${changePercent.toFixed(2)}%`}`}
         </strong>
       </div>
-      <div style={statStyle}>
-        <span style={{ color: "#71717a", fontSize: 12 }}>24H High</span>
-        <strong style={{ color: "#d4d4d8", fontSize: 13 }}>{selectedMarket.stats.high}</strong>
+      <div className="market-stat">
+        <span className="stat-label">Session High</span>
+        <strong className="market-num stat-value">{formatPrice(high)}</strong>
       </div>
-      <div style={statStyle}>
-        <span style={{ color: "#71717a", fontSize: 12 }}>24H Low</span>
-        <strong style={{ color: "#d4d4d8", fontSize: 13 }}>{selectedMarket.stats.low}</strong>
+      <div className="market-stat">
+        <span className="stat-label">Session Low</span>
+        <strong className="market-num stat-value">{formatPrice(low)}</strong>
       </div>
-      <div style={{ ...statStyle, minWidth: 150 }}>
-        <span style={{ color: "#71717a", fontSize: 12 }}>24H Volume (USD)</span>
-        <strong style={{ color: "#d4d4d8", fontSize: 13 }}>{selectedMarket.stats.volumeUsd}</strong>
+      <div className="market-stat market-stat-wide">
+        <span className="stat-label">Session Volume</span>
+        <strong className="market-num stat-value">{formatPrice(volume || null)}</strong>
       </div>
     </section>
   );

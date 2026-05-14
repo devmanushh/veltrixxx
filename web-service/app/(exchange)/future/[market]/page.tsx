@@ -1,4 +1,4 @@
-import FuturesPage from "@/features/pages/FuturesPage";
+import FuturesTradingPage from "@/components/futures/FuturesTradingPage";
 
 type PageProps = {
   params: Promise<{
@@ -9,5 +9,5 @@ type PageProps = {
 export default async function Page({ params }: PageProps) {
   const { market } = await params;
 
-  return <FuturesPage marketParam={market} />;
+  return <FuturesTradingPage marketParam={market} />;
 }

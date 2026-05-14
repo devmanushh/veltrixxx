@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { clearAuthSession, setAuthCookie } from "@/lib/auth";
-import { loginUser } from "@/services/api";
+import { loginUser } from "@/lib/api";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function LoginForm() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       setAuthCookie(data.token);
+      toast.success("Signed in");
 
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
@@ -37,6 +39,7 @@ export default function LoginForm() {
       router.refresh();
     } catch (err: any) {
       setError(err.message);
+      toast.error("Login failed", { description: err.message });
     } finally {
       setLoading(false);
     }
@@ -45,21 +48,18 @@ export default function LoginForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      style={{
-        width: "min(100%, 380px)",
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-      }}
+      className="glass-panel auth-card"
     >
-      <h1 style={{ fontSize: 28, fontWeight: 700 }}>Login</h1>
+      <h1 className="auth-title">Login</h1>
+
+      <p className="section-copy">Markets move fast. So should you.</p>
 
       <input
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        style={{ width: "100%", padding: 12, border: "1px solid #d1d5db", borderRadius: 6 }}
+        className="form-input auth-input"
       />
 
       <input
@@ -67,30 +67,22 @@ export default function LoginForm() {
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        style={{ width: "100%", padding: 12, border: "1px solid #d1d5db", borderRadius: 6 }}
+        className="form-input auth-input"
       />
 
       <button
         type="submit"
         disabled={loading}
-        style={{
-          width: "100%",
-          padding: 12,
-          borderRadius: 6,
-          background: "#111827",
-          color: "white",
-          border: 0,
-          cursor: loading ? "default" : "pointer",
-        }}
+        className="primary-button"
       >
         {loading ? "Logging in..." : "Login"}
       </button>
 
-      {error && <p style={{ color: "#dc2626", marginTop: 0 }}>{error}</p>}
+      {error && <p className="text-danger">{error}</p>}
 
-      <p style={{ fontSize: 14 }}>
+      <p className="text-muted">
         Don&apos;t have an account?{" "}
-        <a href="/register" style={{ color: "#2563eb" }}>
+        <a href="/register" className="text-success">
           Register
         </a>
       </p>

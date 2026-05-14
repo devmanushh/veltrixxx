@@ -1,5 +1,5 @@
-import FuturesPage from "@/features/pages/FuturesPage";
+import FuturesTradingPage from "@/components/futures/FuturesTradingPage";
 
 export default function FutureRoute() {
-  return <FuturesPage />;
+  return <FuturesTradingPage />;
 }

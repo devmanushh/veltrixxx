@@ -1,38 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cancelOrder, getOpenOrders, getTradeHistory, getWallet } from "@/services/api";
+import { toast } from "sonner";
+import { useActivityStore } from "@/stores/activityStore";
+import { useWalletStore } from "@/stores/walletStore";
 
 const tabs = ["Orders", "History", "Position", "Balance"] as const;
 
 type Tab = (typeof tabs)[number];
-
-type OrderRow = {
-  id: string;
-  symbol: string;
-  price: number | null;
-  quantity: number;
-  side: string;
-  type: string;
-  status: string;
-  createdAt: string;
-};
-
-type TradeRow = {
-  id: string;
-  buyerId: string;
-  sellerId: string;
-  symbol: string;
-  price: number;
-  quantity: number;
-  createdAt: string;
-};
-
-type Wallet = {
-  id: string;
-  email: string;
-  balance: number;
-};
 
 const formatUsd = (value: number) =>
   value.toLocaleString("en-US", {
@@ -47,128 +22,58 @@ const formatNumber = (value: number | null) =>
         maximumFractionDigits: 8,
       });
 
-const readUserId = () => {
-  try {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    return typeof user.id === "string" ? user.id : "";
-  } catch {
-    return "";
-  }
-};
-
 export default function TradingPanel() {
   const [activeTab, setActiveTab] = useState<Tab>("Orders");
-  const [orders, setOrders] = useState<OrderRow[]>([]);
-  const [trades, setTrades] = useState<TradeRow[]>([]);
-  const [wallet, setWallet] = useState<Wallet | null>(null);
-  const [userId, setUserId] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [cancelingOrderId, setCancelingOrderId] = useState("");
-  const [error, setError] = useState("");
-
-  const loadPanelData = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const token = localStorage.getItem("token") || "";
-
-      if (!token) {
-        setOrders([]);
-        setTrades([]);
-        setWallet(null);
-        setError("Login to view trading activity.");
-        return;
-      }
-
-      setUserId(readUserId());
-
-      const [walletResult, ordersResult, tradesResult] = await Promise.all([
-        getWallet(token),
-        getOpenOrders(token),
-        getTradeHistory(token),
-      ]);
-
-      setWallet(walletResult.wallet || null);
-      setOrders(ordersResult.orders || []);
-      setTrades(tradesResult.trades || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Trading panel failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const orders = useActivityStore((state) => state.orders);
+  const trades = useActivityStore((state) => state.trades);
+  const userId = useActivityStore((state) => state.userId);
+  const loading = useActivityStore((state) => state.loading);
+  const error = useActivityStore((state) => state.error);
+  const cancelingOrderId = useActivityStore((state) => state.cancelingOrderId);
+  const loadActivity = useActivityStore((state) => state.loadActivity);
+  const cancelOrderById = useActivityStore((state) => state.cancelOrderById);
+  const wallet = useWalletStore((state) => state.wallet);
+  const walletLoading = useWalletStore((state) => state.loading);
+  const loadWallet = useWalletStore((state) => state.loadWallet);
 
   useEffect(() => {
-    void loadPanelData();
+    void Promise.all([loadActivity(), loadWallet()]);
 
     const onOrdersUpdated = () => {
-      void loadPanelData();
+      void Promise.all([loadActivity(), loadWallet()]);
     };
 
     window.addEventListener("veltrix:orders-updated", onOrdersUpdated);
+    window.addEventListener("veltrix:wallet-updated", onOrdersUpdated);
 
     return () => {
       window.removeEventListener("veltrix:orders-updated", onOrdersUpdated);
+      window.removeEventListener("veltrix:wallet-updated", onOrdersUpdated);
     };
   }, []);
 
-  const notifyOrdersUpdated = () => {
-    window.dispatchEvent(new Event("veltrix:orders-updated"));
-  };
-
   const handleCancelOrder = async (orderId: string) => {
-    setCancelingOrderId(orderId);
-    setError("");
-
     try {
-      const token = localStorage.getItem("token") || "";
-      await cancelOrder(token, orderId);
-      setOrders((current) => current.filter((order) => order.id !== orderId));
-      notifyOrdersUpdated();
+      await cancelOrderById(orderId);
+      toast.success("Order cancelled");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Cancel order failed");
-    } finally {
-      setCancelingOrderId("");
+      const message = err instanceof Error ? err.message : "Cancel order failed";
+      toast.error("Cancel failed", { description: message });
     }
   };
 
   return (
     <section
-      style={{
-        minHeight: 0,
-        border: "1px solid var(--app-border, #20242d)",
-        borderRadius: 10,
-        background: "var(--app-panel, #11141c)",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-      }}
+      className="exchange-panel trading-panel"
     >
-      <div
-        style={{
-          height: 48,
-          display: "flex",
-          alignItems: "center",
-          gap: 18,
-          padding: "0 16px",
-          borderBottom: "1px solid var(--app-border, #20242d)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 18, flex: 1 }}>
+      <div className="trading-panel-header">
+        <div className="trading-tabs">
           {tabs.map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              style={{
-                border: 0,
-                borderRadius: 8,
-                padding: "8px 12px",
-                background: activeTab === tab ? "#222632" : "transparent",
-                color: activeTab === tab ? "#fff" : "#9ca3af",
-                fontWeight: activeTab === tab ? 700 : 500,
-              }}
+              className={activeTab === tab ? "tab-button tab-button-active" : "tab-button"}
             >
               {tab}
             </button>
@@ -176,61 +81,44 @@ export default function TradingPanel() {
         </div>
         <button
           type="button"
-          onClick={() => void loadPanelData()}
+          onClick={() => void Promise.all([loadActivity(), loadWallet()])}
           disabled={loading}
           title="Refresh"
-          style={{
-            border: "1px solid var(--app-border, #20242d)",
-            borderRadius: 8,
-            background: "#151923",
-            color: "#d4d4d8",
-            fontSize: 12,
-            fontWeight: 700,
-            height: 30,
-            padding: "0 10px",
-          }}
+          className="ghost-button"
         >
           {loading ? "Loading" : "Refresh"}
         </button>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, padding: 12, color: "#9ca3af", overflow: "auto" }}>
+      <div className="trading-panel-body">
         {error && (
-          <div style={{ marginBottom: 8, color: error.includes("Login") ? "#a1a1aa" : "#f87171", fontSize: 12 }}>
+          <div className={error.includes("Login") ? "text-muted" : "text-danger"}>
             {error}
           </div>
         )}
 
         {activeTab === "Orders" && (
-          <PanelGrid columns="1.1fr 0.7fr 0.7fr 0.8fr 0.8fr 0.8fr 1fr 0.8fr">
+          <PanelGrid className="panel-grid-orders">
             <GridHead labels={["Symbol", "Side", "Type", "Price", "Qty", "Status", "Time", "Action"]} />
             {loading && <EmptyRow columns={8}>Loading orders...</EmptyRow>}
             {!loading && orders.length === 0 && <EmptyRow columns={8}>No pending orders.</EmptyRow>}
             {!loading &&
               orders.slice(0, 8).map((order) => (
                 <Row key={order.id} columns={8}>
-                  <strong style={{ color: "#f4f4f5" }}>{order.symbol}</strong>
-                  <span style={{ color: order.side === "buy" ? "#22c55e" : "#ef4444", textTransform: "uppercase" }}>
+                  <strong className="text-strong">{order.symbol}</strong>
+                  <span className={order.side === "buy" ? "market-green" : "market-red"}>
                     {order.side}
                   </span>
-                  <span style={{ textTransform: "capitalize" }}>{order.type}</span>
-                  <span>{formatNumber(order.price)}</span>
-                  <span>{formatNumber(order.quantity)}</span>
-                  <span style={{ textTransform: "capitalize" }}>{order.status}</span>
+                  <span>{order.type}</span>
+                  <span className="market-num">{formatNumber(order.price)}</span>
+                  <span className="market-num">{formatNumber(order.quantity)}</span>
+                  <span>{order.status}</span>
                   <span>{new Date(order.createdAt).toLocaleTimeString()}</span>
                   <button
                     type="button"
                     onClick={() => void handleCancelOrder(order.id)}
                     disabled={cancelingOrderId === order.id}
-                    style={{
-                      height: 26,
-                      border: "1px solid rgba(248, 113, 113, 0.35)",
-                      borderRadius: 7,
-                      background: "rgba(127, 29, 29, 0.18)",
-                      color: "#fca5a5",
-                      fontSize: 12,
-                      fontWeight: 800,
-                    }}
+                    className="danger-button"
                   >
                     {cancelingOrderId === order.id ? "..." : "Delete"}
                   </button>
@@ -240,7 +128,7 @@ export default function TradingPanel() {
         )}
 
         {activeTab === "History" && (
-          <PanelGrid columns="1.2fr 0.8fr 0.9fr 0.9fr 1fr">
+          <PanelGrid className="panel-grid-history">
             <GridHead labels={["Symbol", "Side", "Price", "Qty", "Time"]} />
             {loading && <EmptyRow columns={5}>Loading trades...</EmptyRow>}
             {!loading && trades.length === 0 && <EmptyRow columns={5}>No trade history yet.</EmptyRow>}
@@ -250,12 +138,12 @@ export default function TradingPanel() {
 
                 return (
                   <Row key={trade.id} columns={5}>
-                    <strong style={{ color: "#f4f4f5" }}>{trade.symbol}</strong>
-                    <span style={{ color: side === "buy" ? "#22c55e" : "#ef4444", textTransform: "uppercase" }}>
+                    <strong className="text-strong">{trade.symbol}</strong>
+                    <span className={side === "buy" ? "market-green" : "market-red"}>
                       {side}
                     </span>
-                    <span>{formatNumber(trade.price)}</span>
-                    <span>{formatNumber(trade.quantity)}</span>
+                    <span className="market-num">{formatNumber(trade.price)}</span>
+                    <span className="market-num">{formatNumber(trade.quantity)}</span>
                     <span>{new Date(trade.createdAt).toLocaleTimeString()}</span>
                   </Row>
                 );
@@ -264,30 +152,22 @@ export default function TradingPanel() {
         )}
 
         {activeTab === "Position" && (
-          <div style={{ height: "100%", display: "grid", placeItems: "center", color: "#71717a", fontSize: 13 }}>
+          <div className="stack-center">
             No open positions.
           </div>
         )}
 
         {activeTab === "Balance" && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "minmax(180px, 0.9fr) minmax(260px, 1fr)",
-              gap: 12,
-              alignItems: "stretch",
-              minHeight: 86,
-            }}
-          >
-            <div style={{ border: "1px solid var(--app-border, #20242d)", borderRadius: 8, padding: 12 }}>
-              <span style={{ display: "block", color: "#71717a", fontSize: 12 }}>Wallet Balance</span>
-              <strong style={{ display: "block", marginTop: 8, color: "#f4f4f5", fontSize: 20 }}>
-                {loading ? "Loading..." : formatUsd(wallet?.balance || 0)}
+          <div className="panel-grid-wallet">
+            <div className="glass-panel metric-card">
+              <span className="stat-label">Wallet Balance</span>
+              <strong className="market-price">
+                {walletLoading ? "Loading..." : formatUsd(wallet?.balance || 0)}
               </strong>
             </div>
-            <div style={{ border: "1px solid var(--app-border, #20242d)", borderRadius: 8, padding: 12 }}>
-              <span style={{ display: "block", color: "#71717a", fontSize: 12 }}>Signed In Wallet</span>
-              <strong style={{ display: "block", marginTop: 8, color: "#f4f4f5", fontSize: 13, wordBreak: "break-all" }}>
+            <div className="glass-panel metric-card">
+              <span className="stat-label">Signed In Wallet</span>
+              <strong className="text-strong word-break">
                 {wallet?.email || "Login required"}
               </strong>
             </div>
@@ -298,18 +178,9 @@ export default function TradingPanel() {
   );
 }
 
-function PanelGrid({ columns, children }: { columns: string; children: React.ReactNode }) {
+function PanelGrid({ className, children }: { className: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: columns,
-        gap: "8px 12px",
-        alignItems: "center",
-        color: "#a1a1aa",
-        fontSize: 12,
-      }}
-    >
+    <div className={`panel-grid ${className}`}>
       {children}
     </div>
   );
@@ -317,28 +188,25 @@ function PanelGrid({ columns, children }: { columns: string; children: React.Rea
 
 function GridHead({ labels }: { labels: string[] }) {
   return labels.map((label) => (
-    <strong key={label} style={{ color: "#71717a", fontSize: 11, textTransform: "uppercase" }}>
+    <strong key={label} className="table-head">
       {label}
     </strong>
   ));
 }
 
-function Row({ columns, children }: { columns: number; children: React.ReactNode }) {
+function Row(props: { columns: number; children: React.ReactNode }) {
   return (
     <div
-      style={{
-        display: "contents",
-        gridColumn: `span ${columns}`,
-      }}
+      className="grid-row"
     >
-      {children}
+      {props.children}
     </div>
   );
 }
 
 function EmptyRow({ columns, children }: { columns: number; children: React.ReactNode }) {
   return (
-    <span style={{ gridColumn: `span ${columns}`, color: "#71717a", paddingTop: 8 }}>
+    <span className={columns === 8 ? "empty-row-8 text-dim" : "empty-row-5 text-dim"}>
       {children}
     </span>
   );

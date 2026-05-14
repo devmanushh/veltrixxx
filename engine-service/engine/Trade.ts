@@ -17,6 +17,7 @@ export class Trade {
   public sellOrderDbId: string;
   public buyOrderRemaining: number;
   public sellOrderRemaining: number;
+  public side: "BUY" | "SELL";
 
   public timestamp: Timestamp;
 
@@ -33,6 +34,7 @@ export class Trade {
     sellOrderDbId: string;
     buyOrderRemaining: number;
     sellOrderRemaining: number;
+    side: "BUY" | "SELL";
     timestamp: Timestamp;
   }) {
     this.id = params.id;
@@ -51,6 +53,7 @@ export class Trade {
     this.sellOrderDbId = params.sellOrderDbId;
     this.buyOrderRemaining = params.buyOrderRemaining;
     this.sellOrderRemaining = params.sellOrderRemaining;
+    this.side = params.side;
 
     this.timestamp = params.timestamp;
   }

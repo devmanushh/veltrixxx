@@ -3,8 +3,18 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { removeAuthCookie } from "@/lib/auth";
 import Logo from "@/components/ui/logo";
+import { useWalletStore } from "@/stores/walletStore";
+
+type Theme = "dark" | "light";
+
+const formatUsd = (value: number) =>
+  value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
 
 const getDisplayName = () => {
   if (typeof window === "undefined") {
@@ -30,100 +40,126 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [displayName, setDisplayName] = useState("User");
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState<Theme>("dark");
+  const wallet = useWalletStore((state) => state.wallet);
+  const walletLoading = useWalletStore((state) => state.loading);
+  const loadWallet = useWalletStore((state) => state.loadWallet);
+  const resetWallet = useWalletStore((state) => state.resetWallet);
 
   useEffect(() => {
     setDisplayName(getDisplayName());
 
-    const savedTheme = localStorage.getItem("theme") || "dark";
+    const storedTheme = localStorage.getItem("theme");
+    const savedTheme: Theme = storedTheme === "light" ? "light" : "dark";
     setTheme(savedTheme);
-    applyTheme(savedTheme);
+    document.documentElement.dataset.theme = savedTheme;
+    document.documentElement.style.colorScheme = savedTheme;
+
+    const onWalletUpdated = () => {
+      void loadWallet();
+    };
+
+    void loadWallet();
+    window.addEventListener("veltrix:orders-updated", onWalletUpdated);
+    window.addEventListener("veltrix:wallet-updated", onWalletUpdated);
+
+    return () => {
+      window.removeEventListener("veltrix:orders-updated", onWalletUpdated);
+      window.removeEventListener("veltrix:wallet-updated", onWalletUpdated);
+    };
   }, []);
 
-  const applyTheme = (nextTheme: string) => {
-    const root = document.documentElement;
-    root.dataset.theme = nextTheme;
-    root.style.setProperty("--app-bg", nextTheme === "dark" ? "#0b0e11" : "#eef2f7");
-    root.style.setProperty("--app-fg", nextTheme === "dark" ? "#f4f4f5" : "#111827");
-    root.style.setProperty("--app-panel", nextTheme === "dark" ? "#11141c" : "#ffffff");
-    root.style.setProperty("--app-border", nextTheme === "dark" ? "#20242d" : "#d1d5db");
-  };
-
   const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
+    const nextTheme: Theme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
-    applyTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.style.colorScheme = nextTheme;
+    toast.message(`${nextTheme === "dark" ? "Dark" : "Light"} theme enabled`);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    resetWallet();
     removeAuthCookie();
+    toast.message("Signed out");
     router.push("/login");
     router.refresh();
   };
 
   const navLinkStyle = (href: string) => ({
-    color: pathname.startsWith(href) ? "#ffffff" : "#a1a1aa",
-    fontWeight: pathname.startsWith(href) ? 700 : 500,
-    textDecoration: "none",
+    className: pathname.startsWith(href) ? "app-nav-link app-nav-link-active" : "app-nav-link",
   });
 
   return (
-    <header
-      style={{
-        height: 64,
-        flex: "0 0 64px",
-        display: "flex",
-        alignItems: "center",
-        gap: 24,
-        padding: "0 22px",
-        background: "#0b0e11",
-        borderBottom: "1px solid var(--app-border, #20242d)",
-        color: "#f4f4f5",
-      }}
-    >
+    <header className="app-header">
       <Logo />
 
-      <nav style={{ display: "flex", alignItems: "center", gap: 28, fontSize: 15, color: "#a1a1aa" }}>
-        <Link href="/spot" style={navLinkStyle("/spot")}>Spot</Link>
-        <Link href="/future" style={navLinkStyle("/future")}>Futures</Link>
-        <Link href="/balance" style={navLinkStyle("/balance")}>Balance</Link>
-        <Link href="/portfolio" style={navLinkStyle("/portfolio")}>Portfolio</Link>
-        <Link href="/vault" style={navLinkStyle("/vault")}>Vault</Link>
+      <nav className="app-nav">
+        <Link href="/spot" {...navLinkStyle("/spot")}>Spot</Link>
+        <Link href="/future" {...navLinkStyle("/future")}>Futures</Link>
+        <Link href="/balance" {...navLinkStyle("/balance")}>Balance</Link>
+        <Link href="/portfolio" {...navLinkStyle("/portfolio")}>Portfolio</Link>
+        <Link href="/vault" {...navLinkStyle("/vault")}>Vault</Link>
       </nav>
 
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ color: "#d4d4d8", fontSize: 14 }}>{displayName}</span>
+      <div className="app-header-actions">
+        <span className="app-header-balance">
+          {walletLoading ? "Balance ..." : formatUsd(wallet?.balance || 0)}
+        </span>
+        <span className="app-header-user">{displayName}</span>
         <button
           type="button"
+          aria-label="Toggle theme"
+          aria-pressed={theme === "light"}
+          title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
           onClick={toggleTheme}
-          style={{
-            height: 36,
-            padding: "0 12px",
-            borderRadius: 8,
-            border: "1px solid #272b35",
-            background: "#171a22",
-            color: "#f4f4f5",
-          }}
+          className="icon-button"
         >
-          {theme === "dark" ? "Light" : "Dark"}
+          {theme === "dark" ? (
+            <svg
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="M12 20v2" />
+              <path d="m4.93 4.93 1.41 1.41" />
+              <path d="m17.66 17.66 1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="M20 12h2" />
+              <path d="m6.34 17.66-1.41 1.41" />
+              <path d="m19.07 4.93-1.41 1.41" />
+            </svg>
+          ) : (
+            <svg
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20.99 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 20.99 12.79Z" />
+            </svg>
+          )}
         </button>
         <button
           type="button"
           aria-label="Notifications"
           title="Notifications"
-          style={{
-            width: 36,
-            height: 36,
-            display: "grid",
-            placeItems: "center",
-            borderRadius: 8,
-            border: "1px solid #272b35",
-            background: "#171a22",
-            color: "#f4f4f5",
-          }}
+          className="icon-button"
         >
           <svg
             aria-hidden="true"
@@ -144,14 +180,7 @@ export default function Header() {
 
       <button
         onClick={handleLogout}
-        style={{
-          height: 36,
-          padding: "0 14px",
-          borderRadius: 8,
-          border: "1px solid #272b35",
-          background: "#171a22",
-          color: "#f4f4f5",
-        }}
+        className="ghost-button"
       >
         Logout
       </button>

@@ -1,5 +1,19 @@
-import VaultPage from "@/features/pages/VaultPage";
+import EarnProducts from "@/components/vault/EarnProducts";
+import VaultOverview from "@/components/vault/VaultOverview";
 
 export default function Page() {
-  return <VaultPage />;
+  return (
+    <>
+      <VaultOverview />
+      <EarnProducts />
+      <section className="exchange-panel content-panel">
+        <h2 className="panel-title">Yield Activity</h2>
+        <div className="simple-grid">
+          <span>USDT Flexible: +12.42 USDT</span>
+          <span>ETH Staking: +0.018 ETH</span>
+          <span>Next payout: 08:00 UTC</span>
+        </div>
+      </section>
+    </>
+  );
 }
