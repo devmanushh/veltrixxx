@@ -1,7 +1,7 @@
 import { getBalance } from "../store/balanceStore.js";
 import { Trade } from "./Trade.js";
 import { getLock } from "../store/orderLockStore.js";
-import { parseMarketAssets } from "../market/symbol.js";
+import { parseMarketAssets } from "../../packages/utils/parseMarketAssets.js";
 
 /**
  * Apply balance changes after trade execution

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { removeAuthCookie } from "@/lib/auth";
 import Logo from "@/components/ui/logo";
+import { primaryNavRoutes, routes } from "@/config/routes";
 import { useWalletStore } from "@/stores/walletStore";
 
 type Theme = "dark" | "light";
@@ -67,7 +68,7 @@ export default function Header() {
       window.removeEventListener("veltrix:orders-updated", onWalletUpdated);
       window.removeEventListener("veltrix:wallet-updated", onWalletUpdated);
     };
-  }, []);
+  }, [loadWallet]);
 
   const toggleTheme = () => {
     const nextTheme: Theme = theme === "dark" ? "light" : "dark";
@@ -84,7 +85,7 @@ export default function Header() {
     resetWallet();
     removeAuthCookie();
     toast.message("Signed out");
-    router.push("/login");
+    router.push(routes.login);
     router.refresh();
   };
 
@@ -97,11 +98,11 @@ export default function Header() {
       <Logo />
 
       <nav className="app-nav">
-        <Link href="/spot" {...navLinkStyle("/spot")}>Spot</Link>
-        <Link href="/future" {...navLinkStyle("/future")}>Futures</Link>
-        <Link href="/balance" {...navLinkStyle("/balance")}>Balance</Link>
-        <Link href="/portfolio" {...navLinkStyle("/portfolio")}>Portfolio</Link>
-        <Link href="/vault" {...navLinkStyle("/vault")}>Vault</Link>
+        {primaryNavRoutes.map((route) => (
+          <Link key={route.href} href={route.href} {...navLinkStyle(route.href)}>
+            {route.label}
+          </Link>
+        ))}
       </nav>
 
       <div className="app-header-actions">

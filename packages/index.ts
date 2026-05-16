@@ -6,4 +6,3 @@ export * from "./logger/index.js";
 export * from "./errors/index.js";
 export * from "./redis/index.js";
 export * from "./db/client.js";
-export * from "./errors/index.js";

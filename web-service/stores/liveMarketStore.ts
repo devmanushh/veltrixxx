@@ -2,19 +2,7 @@
 
 import { create } from "zustand";
 import { connectWS, type OrderBookLevel, type TradeTapeItem } from "@/lib/websocket";
-
-export type CandleInterval = "1m" | "5m" | "15m" | "1h";
-
-export type Candle = {
-  symbol: string;
-  interval: CandleInterval;
-  bucket: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-};
+import type { Candle } from "@/types/trading.types";
 
 type OrderBookState = {
   bids: OrderBookLevel[];
@@ -114,7 +102,7 @@ export const useLiveMarketStore = create<LiveMarketState>((set, get) => ({
       }
 
       if (message.type === "CANDLE_SNAPSHOT") {
-        const nextCandles = (message.data as Candle[])
+        const nextCandles = message.data
           .filter((candle) => candle.symbol === symbol)
           .sort((a, b) => a.bucket - b.bucket)
           .slice(-80);
@@ -127,7 +115,7 @@ export const useLiveMarketStore = create<LiveMarketState>((set, get) => ({
       }
 
       if (message.type === "CANDLE_UPDATE") {
-        const nextCandle = message.data as Candle;
+        const nextCandle = message.data;
         if (nextCandle.symbol !== symbol) return;
 
         set((state) => {

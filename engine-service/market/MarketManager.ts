@@ -14,7 +14,7 @@ export class MarketManager {
     if (!market) {
       market = new Market(symbol);
       this.markets.set(symbol, market);
-      console.log(`📈 Market created: ${symbol}`);
+      console.log(`Market created: ${symbol}`);
     }
 
     return market;

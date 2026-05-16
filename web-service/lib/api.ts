@@ -1,7 +1,57 @@
 import { getOrderEndpointPath, normalizeMarketApiSymbol, type MarketKind } from "@veltrix/config/markets";
 import { clearAuthSession } from "@/lib/auth";
+import type { Wallet } from "@/stores/walletStore";
+import type { OrderRow, TradeRow } from "@/types/trading.types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+
+export type OrderInput = {
+  symbol: string;
+  price: number;
+  quantity: number;
+  side: "buy" | "sell";
+  type: "limit";
+};
+
+export type AuthResponse = {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    balance: number;
+  };
+};
+
+export type OrderResponse = {
+  success: boolean;
+  orderId: string;
+  message: string;
+};
+
+export type WalletResponse = {
+  wallet: Wallet | null;
+};
+
+export type OpenOrdersResponse = {
+  orders: OrderRow[];
+};
+
+export type TradeHistoryResponse = {
+  trades: TradeRow[];
+};
+
+export type StripeCheckoutResponse = {
+  url: string;
+};
+
+export type StripeConfirmResponse = {
+  success: boolean;
+  wallet: Wallet | null;
+  credited: boolean;
+};
+
+const getErrorMessage = (err: unknown, fallback: string) =>
+  err instanceof Error ? err.message : fallback;
 
 const isAuthTokenError = (res: Response, error: string) =>
   res.status === 401 && ["Invalid token", "No token"].includes(error);
@@ -20,26 +70,28 @@ const handleExpiredSession = () => {
   }
 };
 
-const parseJsonResponse = async (res: Response, fallbackMessage: string) => {
+const parseJsonResponse = async <T>(res: Response, fallbackMessage: string): Promise<T> => {
   const text = await res.text();
-  let data: any = {};
+  let data: Record<string, unknown> = {};
 
   try {
-    data = text ? JSON.parse(text) : {};
+    data = text ? (JSON.parse(text) as Record<string, unknown>) : {};
   } catch {
     data = { error: text };
   }
 
   if (!res.ok) {
-    if (isAuthTokenError(res, data.error || "")) {
+    const error = typeof data.error === "string" ? data.error : "";
+
+    if (isAuthTokenError(res, error)) {
       handleExpiredSession();
       throw new Error("Session expired. Please log in again.");
     }
 
-    throw new Error(data.error || fallbackMessage);
+    throw new Error(error || fallbackMessage);
   }
 
-  return data;
+  return data as T;
 };
 
 const authHeaders = (token: string) => ({
@@ -59,9 +111,9 @@ export const loginUser = async (email: string, password: string) => {
       body: JSON.stringify({ email, password }),
     });
 
-    return parseJsonResponse(res, "Login failed");
-  } catch (err: any) {
-    throw new Error(err.message || "API unavailable. Make sure the API service is running.");
+    return parseJsonResponse<AuthResponse>(res, "Login failed");
+  } catch (err) {
+    throw new Error(getErrorMessage(err, "API unavailable. Make sure the API service is running."));
   }
 };
 
@@ -75,9 +127,9 @@ export const registerUser = async (email: string, password: string) => {
       body: JSON.stringify({ email, password }),
     });
 
-    return parseJsonResponse(res, "Registration failed");
-  } catch (err: any) {
-    throw new Error(err.message || "API unavailable. Make sure the API service is running.");
+    return parseJsonResponse<AuthResponse>(res, "Registration failed");
+  } catch (err) {
+    throw new Error(getErrorMessage(err, "API unavailable. Make sure the API service is running."));
   }
 };
 
@@ -85,7 +137,7 @@ export const registerUser = async (email: string, password: string) => {
  * PLACE ORDER
  */
 export const placeOrder = async (
-  order: any,
+  order: OrderInput,
   token: string,
   marketKind: MarketKind = "spot",
   apiSymbol = normalizeMarketApiSymbol(String(order.symbol || ""))
@@ -100,7 +152,7 @@ export const placeOrder = async (
     body: JSON.stringify(order),
   });
 
-  return parseJsonResponse(res, "Order failed");
+  return parseJsonResponse<OrderResponse>(res, "Order failed");
 };
 
 export const getWallet = async (token: string) => {
@@ -108,7 +160,7 @@ export const getWallet = async (token: string) => {
     headers: authHeaders(token),
   });
 
-  return parseJsonResponse(res, "Wallet failed");
+  return parseJsonResponse<WalletResponse>(res, "Wallet failed");
 };
 
 export const getOpenOrders = async (token: string) => {
@@ -116,7 +168,7 @@ export const getOpenOrders = async (token: string) => {
     headers: authHeaders(token),
   });
 
-  return parseJsonResponse(res, "Orders failed");
+  return parseJsonResponse<OpenOrdersResponse>(res, "Orders failed");
 };
 
 export const cancelOrder = async (token: string, orderId: string) => {
@@ -125,7 +177,7 @@ export const cancelOrder = async (token: string, orderId: string) => {
     headers: authHeaders(token),
   });
 
-  return parseJsonResponse(res, "Cancel order failed");
+  return parseJsonResponse<OrderResponse>(res, "Cancel order failed");
 };
 
 export const getTradeHistory = async (token: string) => {
@@ -133,7 +185,7 @@ export const getTradeHistory = async (token: string) => {
     headers: authHeaders(token),
   });
 
-  return parseJsonResponse(res, "Trade history failed");
+  return parseJsonResponse<TradeHistoryResponse>(res, "Trade history failed");
 };
 
 export const createStripeCheckout = async (token: string, amountUsd: number) => {
@@ -146,7 +198,7 @@ export const createStripeCheckout = async (token: string, amountUsd: number) => 
     body: JSON.stringify({ amountUsd }),
   });
 
-  return parseJsonResponse(res, "Payment failed");
+  return parseJsonResponse<StripeCheckoutResponse>(res, "Payment failed");
 };
 
 export const confirmStripeCheckout = async (token: string, sessionId: string) => {
@@ -159,5 +211,5 @@ export const confirmStripeCheckout = async (token: string, sessionId: string) =>
     body: JSON.stringify({ sessionId }),
   });
 
-  return parseJsonResponse(res, "Payment confirmation failed");
+  return parseJsonResponse<StripeConfirmResponse>(res, "Payment confirmation failed");
 };

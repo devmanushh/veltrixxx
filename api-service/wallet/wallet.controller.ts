@@ -1,13 +1,11 @@
 import type { Request, Response } from "express";
 import { db } from "../../packages/db/client.js";
+import { getAuthUser, sendError, type AuthenticatedRequest } from "../lib/http.js";
 
 export const getWallet = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-
-    if (!user?.userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const user = getAuthUser(req as AuthenticatedRequest, res);
+    if (!user) return;
 
     const wallet = await db.user.findUnique({
       where: { id: user.userId },
@@ -33,7 +31,7 @@ export const getWallet = async (req: Request, res: Response) => {
     }
 
     return res.json({ wallet });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message || "Wallet failed" });
+  } catch (err) {
+    return sendError(res, err, "Wallet failed");
   }
 };

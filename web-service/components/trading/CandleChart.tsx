@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MarketKind } from "@veltrix/config/markets";
-import { EMPTY_CANDLES, type CandleInterval, useLiveMarketStore } from "@/stores/liveMarketStore";
+import { EMPTY_CANDLES, useLiveMarketStore } from "@/stores/liveMarketStore";
 import { useSelectedMarket } from "@/stores/marketStore";
+import type { CandleInterval } from "@/types/trading.types";
 
 type CandleChartProps = {
   marketKind: MarketKind;

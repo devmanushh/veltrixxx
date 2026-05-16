@@ -43,10 +43,12 @@ app.get("/health/db", async (_, res) => {
   try {
     await db.$queryRaw`SELECT 1`;
     res.json({ status: "ok" });
-  } catch (err: any) {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Database unavailable";
+
     res.status(500).json({
       status: "error",
-      error: err.message || "Database unavailable",
+      error: message,
     });
   }
 });

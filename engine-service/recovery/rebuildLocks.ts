@@ -1,11 +1,16 @@
 import { createLock } from "../store/orderLockStore.js";
-import { parseMarketAssets } from "../market/symbol.js";
+import { parseMarketAssets } from "../../packages/utils/parseMarketAssets.js";
+import type { Order } from "../engine/Order.js";
 
-export const rebuildLocks = (orders: any[]) => {
+export const rebuildLocks = (orders: Order[]) => {
   for (const o of orders) {
     const { base, quote } = parseMarketAssets(o.symbol);
 
     if (o.side === "BUY") {
+      if (o.price === null) {
+        continue;
+      }
+
       createLock(o.id, {
         userId: o.userId,
         base,

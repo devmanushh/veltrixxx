@@ -1,4 +1,4 @@
-type WSMessageHandler = (data: any) => void;
+import type { Candle } from "@/types/trading.types";
 
 export type OrderBookLevel = [number, number];
 
@@ -41,6 +41,26 @@ export type TradeUpdateMessage = {
   data: TradeTapeItem;
 };
 
+export type CandleSnapshotMessage = {
+  type: "CANDLE_SNAPSHOT";
+  data: Candle[];
+};
+
+export type CandleUpdateMessage = {
+  type: "CANDLE_UPDATE";
+  data: Candle;
+};
+
+export type WSMessage =
+  | OrderBookSnapshotMessage
+  | OrderBookDiffMessage
+  | TradeSnapshotMessage
+  | TradeUpdateMessage
+  | CandleSnapshotMessage
+  | CandleUpdateMessage;
+
+type WSMessageHandler = (data: WSMessage) => void;
+
 const getWebSocketUrl = () => {
   const configuredUrl = process.env.NEXT_PUBLIC_WS_URL?.trim() || "ws://localhost:8080";
 
@@ -62,7 +82,7 @@ export const connectWS = (symbol: string, onMessage?: WSMessageHandler) => {
   };
 
   ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+    const data = JSON.parse(event.data) as WSMessage;
 
     onMessage?.(data);
   };

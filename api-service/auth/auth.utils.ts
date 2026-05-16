@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { ENV } from "../../packages/config/env.js";
+import type { AuthUser } from "../lib/http.js";
 
 export const generateToken = (user: { id: string; email: string }) => {
   return jwt.sign(
@@ -9,6 +10,19 @@ export const generateToken = (user: { id: string; email: string }) => {
   );
 };
 
-export const verifyToken = (token: string) => {
-  return jwt.verify(token, ENV.JWT_SECRET);
+export const verifyToken = (token: string): AuthUser => {
+  const decoded = jwt.verify(token, ENV.JWT_SECRET);
+
+  if (
+    typeof decoded !== "object" ||
+    typeof decoded.userId !== "string" ||
+    typeof decoded.email !== "string"
+  ) {
+    throw new Error("Invalid token payload");
+  }
+
+  return {
+    userId: decoded.userId,
+    email: decoded.email,
+  };
 };

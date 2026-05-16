@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { MarketKind } from "@veltrix/config/markets";
 import { toast } from "sonner";
-import { placeOrder } from "@/lib/api";
+import { placeOrder, type OrderInput } from "@/lib/api";
 import { useLiveMarketStore } from "@/stores/liveMarketStore";
 import { useSelectedMarket } from "@/stores/marketStore";
 import { useWalletStore } from "@/stores/walletStore";
@@ -38,12 +38,12 @@ export default function OrderForm({ marketKind }: OrderFormProps) {
     try {
       const token = localStorage.getItem("token");
 
-      const order = {
+      const order: OrderInput = {
         symbol: market.symbol,
         price: Number(price),
         quantity: Number(quantity),
         side,
-        type: "limit"
+        type: "limit",
       };
 
       const res = await placeOrder(order, token || "", marketKind, market.apiSymbol);

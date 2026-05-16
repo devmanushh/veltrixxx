@@ -50,7 +50,7 @@ export default function TradingPanel() {
       window.removeEventListener("veltrix:orders-updated", onOrdersUpdated);
       window.removeEventListener("veltrix:wallet-updated", onOrdersUpdated);
     };
-  }, []);
+  }, [loadActivity, loadWallet]);
 
   const handleCancelOrder = async (orderId: string) => {
     try {

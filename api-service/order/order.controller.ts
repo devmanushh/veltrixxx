@@ -1,24 +1,18 @@
 import { Request, Response } from "express";
 import { cancelOrderService, placeOrderService } from "./order.service.js";
 import { pub } from "../lib/redis.js";
-
-// ⚠️ IMPORTANT: import DIRECTLY from correct files (not index.js barrel)
 import { generateId } from "../../packages/utils/generateId.js";
 import { validateOrder } from "../../packages/validators/order.validator.js";
 import type { Order } from "../../packages/types/order.types.js";
+import { getAuthUser, sendError, type AuthenticatedRequest } from "../lib/http.js";
 
 /**
  * CREATE ORDER
  */
 export const createOrder = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-
-    if (!user || !user.userId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
-    }
+    const user = getAuthUser(req as AuthenticatedRequest, res);
+    if (!user) return;
 
     // 1. Validate input
     validateOrder(req.body);
@@ -45,11 +39,8 @@ export const createOrder = async (req: Request, res: Response) => {
       message: "Order accepted",
     });
 
-  } catch (err: any) {
-    return res.status(err.statusCode || 500).json({
-      success: false,
-      error: err.message || "Order failed",
-    });
+  } catch (err) {
+    return sendError(res, err, "Order failed");
   }
 };
 
@@ -58,14 +49,10 @@ export const createOrder = async (req: Request, res: Response) => {
  */
 export const cancelOrder = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-    const orderId = req.params.orderId || req.body.orderId;
+    const user = getAuthUser(req as AuthenticatedRequest, res);
+    if (!user) return;
 
-    if (!user || !user.userId) {
-      return res.status(401).json({
-        error: "Unauthorized",
-      });
-    }
+    const orderId = req.params.orderId || req.body.orderId;
 
     if (!orderId) {
       return res.status(400).json({
@@ -87,8 +74,9 @@ export const cancelOrder = async (req: Request, res: Response) => {
           userId: user.userId,
         })
       );
-    } catch (err: any) {
-      console.warn("Cancel order persisted but Redis publish failed:", err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "unknown error";
+      console.warn("Cancel order persisted but Redis publish failed:", message);
     }
 
     return res.json({
@@ -98,10 +86,7 @@ export const cancelOrder = async (req: Request, res: Response) => {
       message: "Order cancelled",
     });
 
-  } catch (err: any) {
-    return res.status(err.statusCode || 500).json({
-      success: false,
-      error: err.message || "Cancel failed",
-    });
+  } catch (err) {
+    return sendError(res, err, "Cancel failed");
   }
 };

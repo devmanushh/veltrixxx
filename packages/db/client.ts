@@ -15,13 +15,15 @@ const getConnectionString = () => {
   }
 
   const url = new URL(ENV.DATABASE_URL);
+  const sslMode = url.searchParams.get("sslmode");
 
   // Prisma Postgres compatibility
-  if (
-    url.searchParams.get("sslmode") === "require" &&
-    !url.searchParams.has("pgbouncer")
-  ) {
+  if (sslMode === "require" && !url.searchParams.has("pgbouncer")) {
     url.searchParams.set("pgbouncer", "true");
+  }
+
+  if (sslMode && ["prefer", "require", "verify-ca"].includes(sslMode)) {
+    url.searchParams.set("sslmode", "verify-full");
   }
 
   return url.toString();

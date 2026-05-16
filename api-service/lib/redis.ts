@@ -33,7 +33,7 @@ export const ensureRedisConnection = async () => {
   }
 };
 
-export const publish = async (channel: string, data: any) => {
+export const publish = async <T>(channel: string, data: T) => {
   await ensureRedisConnection();
   await pub.publish(channel, JSON.stringify(data));
 };

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { clearAuthSession, setAuthCookie } from "@/lib/auth";
 import { registerUser } from "@/lib/api";
+import { routes } from "@/config/routes";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -35,11 +36,12 @@ export default function RegisterForm() {
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
 
-      router.push(next && next.startsWith("/") ? next : "/spot");
+      router.push(next && next.startsWith("/") ? next : routes.spot);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-      toast.error("Registration failed", { description: err.message });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Registration failed";
+      setError(message);
+      toast.error("Registration failed", { description: message });
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,7 @@ export default function RegisterForm() {
       className="glass-panel auth-card"
     >
       <h1 className="auth-title">Register</h1>
-      <p>“Don&apos;t watch the market. Own it.”</p>
+      <p>&ldquo;Don&apos;t watch the market. Own it.&rdquo;</p>
 
       <input
         type="email"

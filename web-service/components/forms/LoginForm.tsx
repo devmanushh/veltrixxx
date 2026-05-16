@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { clearAuthSession, setAuthCookie } from "@/lib/auth";
 import { loginUser } from "@/lib/api";
+import { routes } from "@/config/routes";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -35,11 +36,12 @@ export default function LoginForm() {
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
 
-      router.push(next && next.startsWith("/") ? next : "/spot");
+      router.push(next && next.startsWith("/") ? next : routes.spot);
       router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-      toast.error("Login failed", { description: err.message });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Login failed";
+      setError(message);
+      toast.error("Login failed", { description: message });
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,7 @@ export default function LoginForm() {
     >
       <h1 className="auth-title">Login</h1>
 
-      <p className="section-copy">Markets move fast. So should you.</p>
+      <p className="section-copy">&ldquo;Markets move fast. So should you.&rdquo;</p>
 
       <input
         type="email"

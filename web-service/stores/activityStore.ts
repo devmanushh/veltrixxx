@@ -3,27 +3,7 @@
 import { create } from "zustand";
 import { cancelOrder, getOpenOrders, getTradeHistory } from "@/lib/api";
 import { useWalletStore } from "@/stores/walletStore";
-
-export type OrderRow = {
-  id: string;
-  symbol: string;
-  price: number | null;
-  quantity: number;
-  side: string;
-  type: string;
-  status: string;
-  createdAt: string;
-};
-
-export type TradeRow = {
-  id: string;
-  buyerId: string;
-  sellerId: string;
-  symbol: string;
-  price: number;
-  quantity: number;
-  createdAt: string;
-};
+import type { OrderRow, TradeRow } from "@/types/trading.types";
 
 type ActivityState = {
   orders: OrderRow[];

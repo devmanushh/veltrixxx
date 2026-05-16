@@ -2,6 +2,22 @@ import type { Request, Response } from "express";
 import crypto from "node:crypto";
 import { ENV } from "../../packages/config/env.js";
 import { db, type DbTransactionClient } from "../../packages/db/client.js";
+import { getAuthUser, sendError, type AuthenticatedRequest } from "../lib/http.js";
+
+type StripeCheckoutSession = {
+  id?: string;
+  url?: string;
+  amount_total?: number;
+  payment_status?: string;
+  status?: string;
+  client_reference_id?: string;
+  metadata?: {
+    userId?: string;
+  };
+  error?: {
+    message?: string;
+  };
+};
 
 const getStripeSession = async (sessionId: string) => {
   const stripeRes = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
@@ -10,7 +26,7 @@ const getStripeSession = async (sessionId: string) => {
     },
   });
 
-  const session = await stripeRes.json();
+  const session = (await stripeRes.json()) as StripeCheckoutSession;
 
   if (!stripeRes.ok) {
     throw new Error(session.error?.message || "Stripe session lookup failed");
@@ -19,7 +35,7 @@ const getStripeSession = async (sessionId: string) => {
   return session;
 };
 
-const creditCompletedStripeSession = async (session: any) => {
+const creditCompletedStripeSession = async (session: StripeCheckoutSession) => {
   const sessionId = String(session.id || "");
   const userId = String(session.metadata?.userId || session.client_reference_id || "");
   const amountUsd = Number(session.amount_total || 0) / 100;
@@ -78,11 +94,8 @@ const creditCompletedStripeSession = async (session: any) => {
 
 export const createStripeCheckout = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-
-    if (!user?.userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const user = getAuthUser(req as AuthenticatedRequest, res);
+    if (!user) return;
 
     if (!ENV.STRIPE_SECRET_KEY || ENV.STRIPE_SECRET_KEY.includes("REPLACE_ME")) {
       return res.status(400).json({
@@ -116,12 +129,16 @@ export const createStripeCheckout = async (req: Request, res: Response) => {
       body: params,
     });
 
-    const session = await stripeRes.json();
+    const session = (await stripeRes.json()) as StripeCheckoutSession;
 
     if (!stripeRes.ok) {
       return res.status(stripeRes.status).json({
         error: session.error?.message || "Stripe checkout failed",
       });
+    }
+
+    if (!session.id || !session.url) {
+      return res.status(502).json({ error: "Stripe checkout response was incomplete" });
     }
 
     await db.paymentTopUp.create({
@@ -134,18 +151,15 @@ export const createStripeCheckout = async (req: Request, res: Response) => {
     });
 
     return res.json({ url: session.url });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message || "Payment failed" });
+  } catch (err) {
+    return sendError(res, err, "Payment failed");
   }
 };
 
 export const confirmStripeCheckout = async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-
-    if (!user?.userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+    const user = getAuthUser(req as AuthenticatedRequest, res);
+    if (!user) return;
 
     if (!ENV.STRIPE_SECRET_KEY || ENV.STRIPE_SECRET_KEY.includes("REPLACE_ME")) {
       return res.status(400).json({
@@ -173,8 +187,8 @@ export const confirmStripeCheckout = async (req: Request, res: Response) => {
       wallet: result.wallet,
       credited: result.credited,
     });
-  } catch (err: any) {
-    return res.status(400).json({ error: err.message || "Payment confirmation failed" });
+  } catch (err) {
+    return sendError(res, err, "Payment confirmation failed", 400);
   }
 };
 
@@ -218,12 +232,12 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
     const event = JSON.parse(rawBody.toString("utf8"));
 
     if (event.type === "checkout.session.completed") {
-      const session = event.data?.object;
+      const session = event.data?.object as StripeCheckoutSession;
       await creditCompletedStripeSession(session);
     }
 
     return res.json({ received: true });
-  } catch (err: any) {
-    return res.status(400).json({ error: err.message || "Stripe webhook failed" });
+  } catch (err) {
+    return sendError(res, err, "Stripe webhook failed", 400);
   }
 };
