@@ -112,21 +112,33 @@ export default function MarketStatsBar({
       </div>
 
       <div className="market-stat">
-        <span className="stat-label">Session Change</span>
+        <span className="stat-label">
+          <span className="stat-label-full">Session Change</span>
+          <span className="stat-label-short">Chng</span>
+        </span>
         <strong className={`${(sessionStats?.change || 0) >= 0 ? "market-green" : "market-red"} market-num stat-value`}>
           {sessionStats ? `${formatPrice(sessionStats.change)} ${sessionStats.changePercent.toFixed(2)}%` : "-"}
         </strong>
       </div>
       <div className="market-stat">
-        <span className="stat-label">Session High</span>
+        <span className="stat-label">
+          <span className="stat-label-full">Session High</span>
+          <span className="stat-label-short">High</span>
+        </span>
         <strong className="market-num stat-value">{formatPrice(sessionStats?.high)}</strong>
       </div>
       <div className="market-stat">
-        <span className="stat-label">Session Low</span>
+        <span className="stat-label">
+          <span className="stat-label-full">Session Low</span>
+          <span className="stat-label-short">Low</span>
+        </span>
         <strong className="market-num stat-value">{formatPrice(sessionStats?.low)}</strong>
       </div>
       <div className="market-stat market-stat-wide">
-        <span className="stat-label">Session Volume</span>
+        <span className="stat-label">
+          <span className="stat-label-full">Session Volume</span>
+          <span className="stat-label-short">Vol</span>
+        </span>
         <strong className="market-num stat-value">{formatPrice(sessionStats?.volumeUsd)}</strong>
       </div>
     </section>

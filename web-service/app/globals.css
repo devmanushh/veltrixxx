@@ -252,9 +252,9 @@ select:focus {
   min-height: 64px;
   flex: 0 0 auto;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
   row-gap: 8px;
   padding: 10px 14px;
   background: var(--app-header);
@@ -265,10 +265,11 @@ select:focus {
 }
 
 .app-nav {
-  flex: 1 1 280px;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: clamp(8px, 1.5vw, 16px);
   overflow-x: auto;
   color: var(--app-muted);
   font-size: 13px;
@@ -288,6 +289,7 @@ select:focus {
 
 .app-header-actions {
   margin-left: auto;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -295,8 +297,12 @@ select:focus {
 }
 
 .app-header-user {
+  max-width: clamp(80px, 13vw, 180px);
+  overflow: hidden;
   color: var(--app-fg);
   font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-header-balance {
@@ -470,17 +476,17 @@ select:focus {
 .market-bar {
   min-height: 72px;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 18px;
+  gap: clamp(8px, 1.4vw, 18px);
   padding: 10px 12px;
   overflow-x: auto;
   overflow-y: hidden;
 }
 
 .market-identity {
-  flex: 1 1 300px;
-  min-width: 260px;
+  flex: 1 1 auto;
+  min-width: 210px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -502,6 +508,7 @@ select:focus {
 .market-title-block {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .market-select-row {
@@ -512,7 +519,8 @@ select:focus {
 }
 
 .market-select {
-  max-width: 126px;
+  width: 126px;
+  max-width: 30vw;
   height: 30px;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
@@ -539,11 +547,12 @@ select:focus {
 .market-stat {
   display: grid;
   gap: 4px;
-  min-width: 110px;
+  flex: 0 0 auto;
+  min-width: 88px;
 }
 
 .market-stat-wide {
-  min-width: 150px;
+  min-width: 112px;
 }
 
 .stat-label,
@@ -558,6 +567,11 @@ select:focus {
   color: var(--app-fg);
   font-size: 13px;
   font-weight: 800;
+  white-space: nowrap;
+}
+
+.stat-label-short {
+  display: none;
 }
 
 .chart-panel {
@@ -567,6 +581,120 @@ select:focus {
   gap: 12px;
   padding: 10px;
   overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .app-header {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .brand-logo {
+    gap: 6px;
+  }
+
+  .brand-name {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .app-nav {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .app-header-actions {
+    gap: 5px;
+  }
+
+  .app-header-balance,
+  .app-header-user {
+    font-size: 12px;
+  }
+
+  .app-header-user {
+    max-width: 96px;
+  }
+
+  .icon-button,
+  .ghost-button {
+    height: 32px;
+    border-radius: var(--app-radius-sm);
+  }
+
+  .icon-button {
+    width: 32px;
+  }
+
+  .ghost-button {
+    padding: 0 9px;
+    font-size: 12px;
+  }
+
+  .market-bar {
+    min-height: 58px;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .market-identity {
+    min-width: 168px;
+    gap: 7px;
+  }
+
+  .coin-badge {
+    width: 30px;
+    height: 30px;
+    font-size: 10px;
+  }
+
+  .market-select-row {
+    gap: 5px;
+  }
+
+  .market-select {
+    width: 90px;
+    height: 28px;
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .leverage-badge {
+    padding: 2px 5px;
+    font-size: 11px;
+  }
+
+  .market-price {
+    font-size: 15px;
+  }
+
+  .market-stat {
+    min-width: 50px;
+  }
+
+  .market-stat-wide {
+    min-width: 56px;
+  }
+
+  .stat-label-full {
+    display: none;
+  }
+
+  .stat-label-short {
+    display: inline;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-value {
+    font-size: 11px;
+  }
 }
 
 .panel-toolbar {

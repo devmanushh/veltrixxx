@@ -177,14 +177,13 @@ export default function Header() {
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
         </button>
+        <button
+          onClick={handleLogout}
+          className="ghost-button"
+        >
+          Logout
+        </button>
       </div>
-
-      <button
-        onClick={handleLogout}
-        className="ghost-button"
-      >
-        Logout
-      </button>
     </header>
   );
 }
