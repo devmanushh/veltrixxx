@@ -1,6 +1,6 @@
-import { createLock } from "../store/orderLockStore.js";
+import { createLock } from "../stores/orderLockStore.js";
 import { parseMarketAssets } from "../../packages/utils/parseMarketAssets.js";
-import type { Order } from "../engine/Order.js";
+import type { Order } from "../matching/Order.js";
 
 export const rebuildLocks = (orders: Order[]) => {
   for (const o of orders) {

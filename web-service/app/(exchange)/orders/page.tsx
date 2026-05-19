@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { useActivityStore } from "@/stores/activityStore";
+import { useActivityStore } from "@/activity/stores/activityStore";
 
 export default function Page() {
   const orders = useActivityStore((state) => state.orders);

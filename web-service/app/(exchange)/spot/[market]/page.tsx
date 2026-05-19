@@ -1,4 +1,4 @@
-import SpotTradingPage from "@/components/spot/SpotTradingPage";
+import SpotTradingPage from "@/trading/components/spot/SpotTradingPage";
 
 type PageProps = {
   params: Promise<{

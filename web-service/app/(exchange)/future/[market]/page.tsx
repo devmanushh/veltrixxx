@@ -1,4 +1,4 @@
-import FuturesTradingPage from "@/components/futures/FuturesTradingPage";
+import FuturesTradingPage from "@/trading/components/futures/FuturesTradingPage";
 
 type PageProps = {
   params: Promise<{

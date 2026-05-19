@@ -1,5 +1,5 @@
-import AssetList from "@/components/portfolio/AssetList";
-import PortfolioOverview from "@/components/portfolio/PortfolioOverview";
+import AssetList from "@/portfolio/components/AssetList";
+import PortfolioOverview from "@/portfolio/components/PortfolioOverview";
 
 export default function Page() {
   return (

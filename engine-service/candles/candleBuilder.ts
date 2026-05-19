@@ -1,4 +1,4 @@
-import type { Trade } from "../engine/Trade.js";
+import type { Trade } from "../matching/Trade.js";
 import type { CandleInterval } from "./candle.types.js";
 import { getCandle, setCandle } from "./candleStore.js";
 

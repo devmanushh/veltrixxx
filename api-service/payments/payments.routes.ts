@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.middleware.js";
+import { authMiddleware } from "../auth/auth.middleware.js";
 import { confirmStripeCheckout, createStripeCheckout } from "./payments.controller.js";
 
 const router = Router();

@@ -1,14 +1,6 @@
-import Header from "@/components/layout/Header";
-import TradingPanel from "@/components/layout/TradingPanel";
-
-const movers = [
-  "Top Movers",
-  "SOL/USD $84.37",
-  "BTC/USD $63,420",
-  "ETH/USD $3,180",
-  "DOGE/USD $0.1098",
-  "Hourly Yield $0.00",
-];
+import Header from "@/layout/components/Header";
+import TradingPanel from "@/layout/components/TradingPanel";
+import ExchangeTicker from "@/layout/components/ExchangeTicker";
 
 export default function ExchangeLayout({
   children,
@@ -27,13 +19,7 @@ export default function ExchangeLayout({
         <TradingPanel />
       </main>
 
-      <div className="exchange-ticker">
-        {movers.map((item, index) => (
-          <span key={item} className={index === 0 ? "ticker-lead" : undefined}>
-            {item}
-          </span>
-        ))}
-      </div>
+      <ExchangeTicker />
     </div>
   );
 }

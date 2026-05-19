@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { confirmStripeCheckout, createStripeCheckout } from "@/lib/api";
-import { useWalletStore } from "@/stores/walletStore";
+import { useWalletStore } from "@/wallet/stores/walletStore";
 
 const formatUsd = (value: number) =>
   value.toLocaleString("en-US", {

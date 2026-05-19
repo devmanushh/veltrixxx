@@ -1,4 +1,4 @@
-import type { Trade } from "../engine/Trade.js";
+import type { Trade } from "../matching/Trade.js";
 
 export type TradeSnapshotItem = {
   id: number;

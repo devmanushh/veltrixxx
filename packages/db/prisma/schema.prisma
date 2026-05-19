@@ -64,6 +64,22 @@ model Trade {
   seller User @relation("SellerTrades", fields: [sellerId], references: [id])
 }
 
+model Candle {
+  id       String @id @default(cuid())
+  symbol   String
+  interval String
+  bucket   DateTime
+  open     Float
+  high     Float
+  low      Float
+  close    Float
+  volume   Float
+  updatedAt DateTime @updatedAt
+
+  @@unique([symbol, interval, bucket])
+  @@index([symbol, interval, bucket])
+}
+
 model PaymentTopUp {
   id              String   @id @default(cuid())
   stripeSessionId String   @unique

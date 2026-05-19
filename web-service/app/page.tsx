@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { routes } from "@/config/routes";
+import { routes } from "@/routes";
 
 export default async function Home() {
   const cookieStore = await cookies();

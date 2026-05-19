@@ -1,5 +1,5 @@
-import EarnProducts from "@/components/vault/EarnProducts";
-import VaultOverview from "@/components/vault/VaultOverview";
+import EarnProducts from "@/vault/components/EarnProducts";
+import VaultOverview from "@/vault/components/VaultOverview";
 
 export default function Page() {
   return (

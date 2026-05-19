@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useActivityStore } from "@/stores/activityStore";
+import { useActivityStore } from "@/activity/stores/activityStore";
 
 export default function Page() {
   const trades = useActivityStore((state) => state.trades);

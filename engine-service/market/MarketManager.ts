@@ -1,6 +1,6 @@
 import { Market } from "./Market.js";
-import { Order } from "../engine/Order.js";
-import { Trade } from "../engine/Trade.js";
+import { Order } from "../matching/Order.js";
+import { Trade } from "../matching/Trade.js";
 
 export class MarketManager {
   private markets: Map<string, Market> = new Map();

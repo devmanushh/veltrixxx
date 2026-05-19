@@ -1,5 +1,5 @@
-import { addOrder } from "../store/orderStore.js";
-import { Order } from "../engine/Order.js";
+import { addOrder } from "../stores/orderStore.js";
+import { Order } from "../matching/Order.js";
 import { marketManager } from "../market/MarketManager.js";
 
 type IncomingOrder = {

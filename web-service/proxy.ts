@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { protectedRoutes, routes } from "@/config/routes";
+import { protectedRoutes, routes } from "@/routes";
 
 export function proxy(request: NextRequest) {
   const token = request.cookies.get("token")?.value;

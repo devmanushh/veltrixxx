@@ -1,4 +1,4 @@
-import { Trade } from "../engine/Trade.js";
+import { Trade } from "../matching/Trade.js";
 
 export const TRADE_EVENT = "trade";
 

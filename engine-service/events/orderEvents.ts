@@ -1,4 +1,4 @@
-import { Order } from "../engine/Order.js";
+import { Order } from "../matching/Order.js";
 
 export const ORDER_EVENT = "order";
 

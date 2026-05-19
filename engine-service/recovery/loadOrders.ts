@@ -1,5 +1,5 @@
 import { db } from "../../packages/db/client.js";
-import { Order } from "../engine/Order.js";
+import { Order } from "../matching/Order.js";
 
 type DbOrder = Awaited<ReturnType<typeof db.order.findMany>>[number];
 

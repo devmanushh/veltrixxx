@@ -1,10 +1,11 @@
 import express from "express";
 import cors from "cors";
 import authRoutes from "./auth/auth.routes.js";
-import orderRoutes from "./order/order.routes.js";
+import orderRoutes from "./orders/order.routes.js";
 import walletRoutes from "./wallet/wallet.routes.js";
 import activityRoutes from "./activity/activity.routes.js";
 import paymentRoutes from "./payments/payments.routes.js";
+import marketRoutes from "./market/market.routes.js";
 import { handleStripeWebhook } from "./payments/payments.controller.js";
 import { ENV } from "../packages/config/env.js";
 import { db } from "../packages/db/client.js";
@@ -25,6 +26,7 @@ app.use("/future/:market/order", orderRoutes);
 app.use("/wallet", walletRoutes);
 app.use("/activity", activityRoutes);
 app.use("/payments", paymentRoutes);
+app.use("/market", marketRoutes);
 
 app.get("/", (_, res) => {
   res.json({

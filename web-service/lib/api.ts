@@ -1,7 +1,7 @@
 import { getOrderEndpointPath, normalizeMarketApiSymbol, type MarketKind } from "@veltrix/config/markets";
-import { clearAuthSession } from "@/lib/auth";
-import type { Wallet } from "@/stores/walletStore";
-import type { OrderRow, TradeRow } from "@/types/trading.types";
+import { clearAuthSession } from "@/auth/lib/auth";
+import type { Wallet } from "@/wallet/stores/walletStore";
+import type { Candle, CandleInterval, MarketSessionStats, OrderRow, TradeRow } from "@/trading/types/trading.types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
@@ -38,6 +38,14 @@ export type OpenOrdersResponse = {
 
 export type TradeHistoryResponse = {
   trades: TradeRow[];
+};
+
+export type CandlesResponse = {
+  candles: Candle[];
+};
+
+export type MarketStatsResponse = {
+  stats: MarketSessionStats[];
 };
 
 export type StripeCheckoutResponse = {
@@ -186,6 +194,29 @@ export const getTradeHistory = async (token: string) => {
   });
 
   return parseJsonResponse<TradeHistoryResponse>(res, "Trade history failed");
+};
+
+export const getMarketCandles = async (
+  symbol: string,
+  interval: CandleInterval,
+  limit = 500
+) => {
+  const params = new URLSearchParams({
+    interval,
+    limit: String(limit),
+  });
+  const res = await fetch(`${API_URL}/market/${encodeURIComponent(symbol)}/candles?${params.toString()}`);
+
+  return parseJsonResponse<CandlesResponse>(res, "Candles failed");
+};
+
+export const getMarketStats = async (symbols: string[]) => {
+  const params = new URLSearchParams({
+    symbols: symbols.join(","),
+  });
+  const res = await fetch(`${API_URL}/market/stats?${params.toString()}`);
+
+  return parseJsonResponse<MarketStatsResponse>(res, "Market stats failed");
 };
 
 export const createStripeCheckout = async (token: string, amountUsd: number) => {
