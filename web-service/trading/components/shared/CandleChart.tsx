@@ -136,7 +136,16 @@ export default function CandleChart({ marketKind }: CandleChartProps) {
     candleSeriesRef.current = candleSeries;
     volumeSeriesRef.current = volumeSeries;
 
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) {
+        chart.resize(Math.floor(width), Math.floor(height));
+      }
+    });
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       candleSeriesRef.current = null;
@@ -196,55 +205,79 @@ export default function CandleChart({ marketKind }: CandleChartProps) {
   return (
     <section className="exchange-panel chart-panel">
       <div className="panel-toolbar">
-        <h2 className="panel-title">{market.selectorLabel} Chart</h2>
-        <div className="chart-toolbar">
-          <div className="interval-list">
-            {intervals.map((item) => (
+        <div className="chart-header-group">
+          <h2 className="panel-title">{market.selectorLabel} Chart</h2>
+          <div className="chart-toolbar">
+            <div className="interval-list">
+              {intervals.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setInterval(item)}
+                  className={interval === item ? "interval-button interval-button-active" : "interval-button"}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <div className="chart-tools">
               <button
-                key={item}
                 type="button"
-                onClick={() => setInterval(item)}
-                className={interval === item ? "interval-button interval-button-active" : "interval-button"}
+                className="tool-button"
+                title="Zoom in"
+                aria-label="Zoom in"
+                onClick={() => zoom("in")}
               >
-                {item}
+                +
               </button>
-            ))}
-          </div>
-          <div className="chart-tools">
-            <button type="button" className="tool-button" title="Zoom in" onClick={() => zoom("in")}>
-              +
-            </button>
-            <button type="button" className="tool-button" title="Zoom out" onClick={() => zoom("out")}>
-              -
-            </button>
-            <button type="button" className="tool-button chart-reset-button" title="Fit chart" onClick={resetView}>
-              Fit
-            </button>
+              <button
+                type="button"
+                className="tool-button"
+                title="Zoom out"
+                aria-label="Zoom out"
+                onClick={() => zoom("out")}
+              >
+                -
+              </button>
+              <button
+                type="button"
+                className="tool-button chart-reset-button"
+                title="Fit chart"
+                aria-label="Fit chart"
+                onClick={resetView}
+              >
+                Fit
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="chart-canvas chart-canvas-live" ref={containerRef}>
-        {visibleCandles.length === 0 && (
-          <div className="empty-center">
-            {loadError || "Waiting for candle history and live trades"}
-          </div>
-        )}
+      <div className="chart-canvas-frame">
+        <div className="chart-canvas chart-canvas-live" ref={containerRef}>
+          {visibleCandles.length === 0 && (
+            <div className="empty-center">
+              {loadError || "Waiting for candle history and live trades"}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="chart-stat-grid">
-        {[
-          ["Open", activeCandle ? formatValue(activeCandle.open) : "-"],
-          ["High", activeCandle ? formatValue(activeCandle.high) : "-"],
-          ["Low", activeCandle ? formatValue(activeCandle.low) : "-"],
-          ["Close", activeCandle ? formatValue(activeCandle.close) : "-"],
-          ["Volume", activeCandle ? formatValue(activeCandle.volume) : "-"],
-        ].map(([label, value]) => (
-          <div key={label} className="chart-stat">
-            <span>{label}</span>
-            <strong className="market-num stat-value">{value}</strong>
+      <div className="chart-stat-strip">
+        <div className="chart-stat-grid">
+          {[
+            ["O", activeCandle ? formatValue(activeCandle.open) : "-"],
+            ["H", activeCandle ? formatValue(activeCandle.high) : "-"],
+            ["L", activeCandle ? formatValue(activeCandle.low) : "-"],
+            ["C", activeCandle ? formatValue(activeCandle.close) : "-"],
+            ["V", activeCandle ? formatValue(activeCandle.volume) : "-"],
+          ].map(([label, value]) => (
+            <div key={label} className="chart-stat">
+              <span>{label}</span>
+              <strong className="market-num stat-value">{value}</strong>
+            </div>
+          ))}
           </div>
-        ))}
       </div>
     </section>
   );

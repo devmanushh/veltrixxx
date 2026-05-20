@@ -190,7 +190,7 @@ select:focus {
   min-height: 0;
   min-width: 0;
   display: grid;
-  grid-template-rows: auto minmax(320px, 1fr);
+  grid-template-rows: auto minmax(360px, 1fr);
   gap: 8px;
 }
 
@@ -474,22 +474,20 @@ select:focus {
 }
 
 .market-bar {
-  min-height: 72px;
-  display: flex;
-  flex-wrap: nowrap;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: minmax(170px, 1.25fr) repeat(4, minmax(58px, 1fr));
   align-items: center;
-  gap: clamp(8px, 1.4vw, 18px);
-  padding: 10px 12px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  gap: clamp(6px, 1vw, 12px);
+  padding: 8px 10px;
+  overflow: hidden;
 }
 
 .market-identity {
-  flex: 1 1 auto;
-  min-width: 210px;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .coin-badge {
@@ -519,7 +517,7 @@ select:focus {
 }
 
 .market-select {
-  width: 126px;
+  width: 122px;
   max-width: 30vw;
   height: 30px;
   border: 1px solid var(--app-border);
@@ -540,19 +538,19 @@ select:focus {
 
 .market-price {
   color: var(--app-fg);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 900;
 }
 
 .market-stat {
-  display: grid;
+  display: flex;
+  align-items: baseline;
   gap: 4px;
-  flex: 0 0 auto;
-  min-width: 88px;
+  min-width: 0;
 }
 
 .market-stat-wide {
-  min-width: 112px;
+  min-width: 0;
 }
 
 .stat-label,
@@ -576,8 +574,8 @@ select:focus {
 
 .chart-panel {
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 10px;
   overflow: hidden;
@@ -700,22 +698,31 @@ select:focus {
 .panel-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .chart-toolbar {
   margin-left: auto;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .interval-list {
   display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   gap: 4px;
+  min-width: 0;
 }
 
 .interval-button {
+  flex: 1 0 42px;
   height: 28px;
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
@@ -745,12 +752,14 @@ select:focus {
 
 .chart-canvas-live {
   position: relative;
-  min-height: 320px;
+  min-height: 380px;
+  width: 100%;
   padding: 0;
 }
 
 .chart-tools {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 4px;
 }
@@ -772,7 +781,9 @@ select:focus {
 }
 
 .chart-reset-button {
-  width: 38px;
+  width: auto;
+  min-width: 38px;
+  padding: 0 9px;
 }
 
 .empty-center {
@@ -1131,10 +1142,726 @@ select:focus {
   }
 
   .exchange-market-stack {
-    grid-template-rows: auto minmax(280px, 56vh);
+    grid-template-rows: auto minmax(330px, 62vh);
+  }
+
+  .chart-panel {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .panel-toolbar {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .panel-title {
+    flex: 1 1 100%;
+    font-size: 14px;
+  }
+
+  .chart-toolbar {
+    width: 100%;
+    margin-left: 0;
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 6px;
+  }
+
+  .interval-list {
+    flex: 1 1 190px;
+  }
+
+  .interval-button {
+    flex-basis: 44px;
+    height: 32px;
+    padding: 0 6px;
+  }
+
+  .chart-tools {
+    margin-left: auto;
+  }
+
+  .tool-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .chart-reset-button {
+    min-width: 42px;
+    padding: 0 8px;
+  }
+
+  .chart-canvas-live {
+    min-height: 310px;
   }
 
   .exchange-ticker {
     gap: 16px;
   }
+}
+
+/* Exchange responsive layout system. Keep this final block after component rules. */
+.exchange-shell {
+  height: auto;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.exchange-main {
+  grid-template-rows: minmax(0, auto) minmax(160px, auto);
+  overflow: visible;
+}
+
+.exchange-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px) minmax(260px, 340px);
+  align-items: stretch;
+}
+
+.exchange-grid > *,
+.exchange-market-stack,
+.chart-panel,
+.activity-panel,
+.order-form,
+.trading-panel {
+  min-width: 0;
+}
+
+.exchange-market-stack {
+  grid-template-rows: auto minmax(420px, 1fr);
+}
+
+.market-bar {
+  grid-template-columns: minmax(160px, 1.25fr) repeat(4, minmax(54px, 0.8fr));
+  min-height: 60px;
+  gap: 6px;
+  padding: 8px;
+}
+
+.market-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stat-label,
+.stat-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chart-panel {
+  container-type: inline-size;
+  grid-template-rows: auto minmax(360px, 1fr) auto;
+  gap: 6px;
+  padding: 6px 8px;
+  overflow: hidden;
+}
+
+.chart-panel .panel-toolbar {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.chart-header-group {
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(4px, 0.9cqw, 10px);
+  overflow: hidden;
+}
+
+.chart-header-group .panel-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(12px, 1.8cqw, 16px);
+}
+
+.chart-header-group .chart-toolbar,
+.chart-header-group .interval-list,
+.chart-header-group .chart-tools {
+  width: auto;
+  min-width: 0;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(2px, 0.45cqw, 4px);
+}
+
+.chart-header-group .interval-button {
+  flex: 0 0 clamp(26px, 4.3cqw, 36px);
+  width: clamp(26px, 4.3cqw, 36px);
+  height: clamp(24px, 3.7cqw, 28px);
+  padding: 0;
+  font-size: clamp(10px, 1.4cqw, 12px);
+}
+
+.chart-header-group .tool-button {
+  flex: 0 0 clamp(23px, 3.6cqw, 28px);
+  width: clamp(23px, 3.6cqw, 28px);
+  height: clamp(24px, 3.7cqw, 28px);
+  padding: 0;
+  font-size: clamp(10px, 1.4cqw, 12px);
+}
+
+.chart-header-group .chart-reset-button {
+  flex-basis: clamp(32px, 5.2cqw, 40px);
+  width: clamp(32px, 5.2cqw, 40px);
+  min-width: clamp(32px, 5.2cqw, 40px);
+}
+
+.chart-panel .chart-canvas-live {
+  min-height: clamp(360px, 58vh, 560px);
+}
+
+.chart-stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+  gap: 6px;
+}
+
+@media (max-width: 1280px) {
+  .exchange-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+  }
+
+  .exchange-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .exchange-market-stack {
+    grid-template-rows: auto minmax(440px, auto);
+  }
+}
+
+@media (max-width: 980px) {
+  .exchange-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .exchange-market-stack {
+    grid-template-rows: auto minmax(400px, auto);
+  }
+
+  .market-bar {
+    grid-template-columns: minmax(145px, 1.2fr) repeat(4, minmax(46px, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .exchange-main {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .market-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .market-identity {
+    grid-column: 1 / -1;
+  }
+
+  .stat-label-full {
+    display: none;
+  }
+
+  .stat-label-short {
+    display: inline;
+  }
+
+  .chart-header-group .panel-title {
+    max-width: 128px;
+  }
+
+  .chart-panel .chart-canvas-live {
+    min-height: 340px;
+  }
+}
+
+@container (max-width: 500px) {
+  .chart-header-group .panel-title {
+    display: none;
+  }
+}
+
+@container (max-width: 360px) {
+  .chart-header-group .interval-button {
+    flex-basis: 22px;
+    width: 22px;
+    font-size: 9px;
+  }
+
+  .chart-header-group .tool-button {
+    flex-basis: 20px;
+    width: 20px;
+    font-size: 9px;
+  }
+
+  .chart-header-group .chart-reset-button {
+    flex-basis: 28px;
+    width: 28px;
+    min-width: 28px;
+  }
+}
+
+/* Smooth viewport tuning: 25 small steps so the exchange resizes gradually. */
+.exchange-shell {
+  --exchange-pad: 8px;
+  --exchange-gap: 8px;
+  --activity-col: 320px;
+  --order-col: 340px;
+  --market-first-col: 160px;
+  --market-stat-col: 54px;
+  --market-pad: 8px;
+  --chart-row-min: 420px;
+  --chart-canvas-min: 360px;
+  --chart-panel-pad-y: 6px;
+  --chart-panel-pad-x: 8px;
+  --chart-control-gap: 4px;
+  --chart-title-max: 220px;
+  --chart-interval-w: 36px;
+  --chart-tool-w: 28px;
+  --chart-fit-w: 40px;
+}
+
+.exchange-main {
+  gap: var(--exchange-gap);
+  padding: var(--exchange-pad);
+}
+
+.exchange-grid {
+  gap: var(--exchange-gap);
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(230px, var(--activity-col))
+    minmax(250px, var(--order-col));
+}
+
+.exchange-market-stack {
+  gap: var(--exchange-gap);
+  grid-template-rows: auto minmax(var(--chart-row-min), 1fr);
+}
+
+.market-bar {
+  grid-template-columns:
+    minmax(var(--market-first-col), 1.25fr)
+    repeat(4, minmax(var(--market-stat-col), 0.8fr));
+  gap: var(--exchange-gap);
+  padding: var(--market-pad);
+}
+
+.chart-panel {
+  grid-template-rows: auto minmax(var(--chart-canvas-min), 1fr) auto;
+  gap: max(5px, calc(var(--exchange-gap) - 2px));
+  padding: var(--chart-panel-pad-y) var(--chart-panel-pad-x);
+}
+
+.chart-panel .chart-canvas-live {
+  min-height: clamp(var(--chart-canvas-min), 58vh, 560px);
+}
+
+.chart-header-group {
+  gap: var(--chart-control-gap);
+}
+
+.chart-header-group .panel-title {
+  max-width: var(--chart-title-max);
+}
+
+.chart-header-group .chart-toolbar,
+.chart-header-group .interval-list,
+.chart-header-group .chart-tools {
+  gap: var(--chart-control-gap);
+}
+
+.chart-header-group .interval-button {
+  flex-basis: var(--chart-interval-w);
+  width: var(--chart-interval-w);
+}
+
+.chart-header-group .tool-button {
+  flex-basis: var(--chart-tool-w);
+  width: var(--chart-tool-w);
+}
+
+.chart-header-group .chart-reset-button {
+  flex-basis: var(--chart-fit-w);
+  width: var(--chart-fit-w);
+  min-width: var(--chart-fit-w);
+}
+
+@media (max-width: 1680px) {
+  .exchange-shell { --activity-col: 318px; --order-col: 338px; --chart-row-min: 418px; }
+}
+
+@media (max-width: 1600px) {
+  .exchange-shell { --activity-col: 314px; --order-col: 334px; --chart-row-min: 416px; --chart-title-max: 210px; }
+}
+
+@media (max-width: 1520px) {
+  .exchange-shell { --activity-col: 308px; --order-col: 328px; --chart-row-min: 414px; --market-first-col: 156px; }
+}
+
+@media (max-width: 1440px) {
+  .exchange-shell { --activity-col: 302px; --order-col: 322px; --chart-row-min: 410px; --chart-title-max: 198px; }
+}
+
+@media (max-width: 1360px) {
+  .exchange-shell { --activity-col: 296px; --order-col: 316px; --market-stat-col: 52px; --chart-row-min: 408px; }
+}
+
+@media (max-width: 1280px) {
+  .exchange-shell { --activity-col: 292px; --order-col: 308px; --chart-row-min: 440px; --chart-canvas-min: 370px; }
+
+  .exchange-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(250px, var(--order-col));
+  }
+
+  .exchange-grid > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1200px) {
+  .exchange-shell { --exchange-gap: 7px; --order-col: 300px; --chart-row-min: 432px; --chart-title-max: 188px; }
+}
+
+@media (max-width: 1120px) {
+  .exchange-shell { --order-col: 292px; --chart-row-min: 424px; --market-first-col: 150px; --market-stat-col: 50px; }
+}
+
+@media (max-width: 1040px) {
+  .exchange-shell { --order-col: 284px; --chart-row-min: 416px; --chart-canvas-min: 360px; --chart-title-max: 176px; }
+}
+
+@media (max-width: 980px) {
+  .exchange-shell { --chart-row-min: 408px; --chart-canvas-min: 352px; --market-first-col: 145px; --market-stat-col: 48px; }
+
+  .exchange-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 920px) {
+  .exchange-shell { --exchange-gap: 6px; --chart-row-min: 400px; --chart-title-max: 164px; --chart-interval-w: 34px; }
+}
+
+@media (max-width: 860px) {
+  .exchange-shell { --chart-row-min: 392px; --chart-canvas-min: 344px; --chart-tool-w: 27px; --chart-fit-w: 38px; }
+}
+
+@media (max-width: 800px) {
+  .exchange-shell { --exchange-pad: 7px; --chart-row-min: 384px; --market-first-col: 138px; --market-stat-col: 46px; }
+}
+
+@media (max-width: 740px) {
+  .exchange-shell { --exchange-pad: 6px; --chart-row-min: 376px; --chart-canvas-min: 336px; --chart-title-max: 150px; }
+}
+
+@media (max-width: 680px) {
+  .exchange-shell {
+    --market-first-col: 0px;
+    --market-stat-col: 0px;
+    --chart-row-min: 368px;
+    --chart-canvas-min: 328px;
+    --chart-panel-pad-x: 6px;
+    --chart-title-max: 132px;
+  }
+
+  .market-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .market-identity {
+    grid-column: 1 / -1;
+  }
+
+  .stat-label-full {
+    display: none;
+  }
+
+  .stat-label-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 620px) {
+  .exchange-shell { --chart-row-min: 360px; --chart-canvas-min: 320px; --chart-title-max: 116px; --chart-interval-w: 32px; --chart-tool-w: 26px; --chart-fit-w: 36px; }
+}
+
+@media (max-width: 580px) {
+  .exchange-shell { --chart-row-min: 352px; --chart-canvas-min: 314px; --chart-title-max: 100px; --chart-control-gap: 3px; }
+}
+
+@media (max-width: 540px) {
+  .exchange-shell { --chart-row-min: 344px; --chart-canvas-min: 308px; --chart-interval-w: 30px; --chart-tool-w: 24px; --chart-fit-w: 34px; }
+}
+
+@media (max-width: 500px) {
+  .exchange-shell { --chart-row-min: 336px; --chart-canvas-min: 302px; --chart-title-max: 0px; --chart-panel-pad-y: 5px; }
+
+  .chart-header-group .panel-title {
+    display: none;
+  }
+}
+
+@media (max-width: 460px) {
+  .exchange-shell { --exchange-pad: 5px; --exchange-gap: 5px; --chart-row-min: 328px; --chart-canvas-min: 296px; --chart-interval-w: 28px; --chart-fit-w: 32px; }
+}
+
+@media (max-width: 420px) {
+  .exchange-shell { --chart-row-min: 320px; --chart-canvas-min: 290px; --chart-interval-w: 26px; --chart-tool-w: 22px; --chart-fit-w: 30px; }
+}
+
+@media (max-width: 390px) {
+  .exchange-shell { --chart-row-min: 314px; --chart-canvas-min: 284px; --chart-control-gap: 2px; --chart-interval-w: 24px; --chart-tool-w: 21px; --chart-fit-w: 29px; }
+}
+
+@media (max-width: 360px) {
+  .exchange-shell { --chart-row-min: 308px; --chart-canvas-min: 278px; --chart-interval-w: 22px; --chart-tool-w: 20px; --chart-fit-w: 28px; }
+}
+
+@media (max-width: 330px) {
+  .exchange-shell { --exchange-pad: 4px; --exchange-gap: 4px; --chart-row-min: 302px; --chart-canvas-min: 272px; --chart-interval-w: 21px; --chart-tool-w: 19px; --chart-fit-w: 27px; }
+}
+
+@media (max-width: 300px) {
+  .exchange-shell { --chart-row-min: 296px; --chart-canvas-min: 266px; --chart-interval-w: 20px; --chart-tool-w: 18px; --chart-fit-w: 26px; }
+}
+
+/* Final compact chart/market strip fixes. */
+.market-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: clamp(4px, 0.8vw, 8px);
+  min-height: 52px;
+  padding: 6px 8px;
+}
+
+.market-identity {
+  flex: 0 1 190px;
+  gap: 6px;
+}
+
+.coin-badge {
+  width: 28px;
+  height: 28px;
+  font-size: 10px;
+}
+
+.market-select {
+  width: clamp(96px, 15vw, 122px);
+  height: 28px;
+  font-size: 12px;
+}
+
+.market-price {
+  font-size: clamp(12px, 1.6vw, 16px);
+}
+
+.market-stat {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.stat-label,
+.stat-value {
+  font-size: clamp(9px, 1.4vw, 11px);
+  line-height: 1;
+}
+
+.chart-stat-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+}
+
+.chart-stat {
+  min-width: 0;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.chart-stat span,
+.chart-stat strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(10px, 1.6vw, 12px);
+}
+
+.chart-canvas-live .empty-center {
+  padding: 0 8px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .market-bar {
+    gap: 4px;
+  }
+
+  .market-identity {
+    flex-basis: 138px;
+  }
+
+  .market-stat {
+    flex-basis: 42px;
+  }
+
+  .chart-stat-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .market-identity {
+    flex-basis: 116px;
+  }
+
+  .coin-badge {
+    display: none;
+  }
+
+  .market-select {
+    width: 92px;
+  }
+
+  .chart-stat span,
+  .chart-stat strong {
+    font-size: 10px;
+  }
+}
+
+/* Non-negotiable five-cell candle stat strip: never clip O/H/L/C/V. */
+.chart-panel .chart-stat-grid {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+  overflow: visible !important;
+}
+
+.chart-panel .chart-stat {
+  flex: 1 1 20% !important;
+  width: 20% !important;
+  min-width: 0 !important;
+  max-width: 20% !important;
+  display: grid !important;
+  gap: 1px !important;
+  padding: 0 2px !important;
+  overflow: hidden !important;
+}
+
+.chart-panel .chart-stat span,
+.chart-panel .chart-stat strong {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: clamp(9px, 1.3vw, 11px) !important;
+  line-height: 1.15 !important;
+}
+
+.chart-panel .chart-stat strong {
+  font-size: clamp(9px, 1.2vw, 10px) !important;
+}
+
+/* Root overflow fix: isolate chart library sizing from the panel layout. */
+.exchange-shell,
+.exchange-main,
+.exchange-grid,
+.exchange-market-stack,
+.chart-panel,
+.chart-canvas-frame,
+.chart-canvas-live,
+.chart-stat-strip {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+.chart-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.chart-canvas-frame {
+  flex: 1 1 auto;
+  min-height: var(--chart-canvas-min, 320px);
+  contain: layout paint size;
+  overflow: hidden;
+  border-top: 1px solid var(--app-border);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-chart);
+}
+
+.chart-canvas-live {
+  display: block !important;
+  position: relative;
+  height: 100%;
+  min-height: var(--chart-canvas-min, 320px);
+  overflow: hidden !important;
+  border: 0 !important;
+}
+
+.chart-canvas-live > * {
+  max-width: 100% !important;
+}
+
+.chart-canvas-live .empty-center {
+  inset: 0 !important;
+  width: 100% !important;
+  display: grid !important;
+  place-items: center !important;
+  text-align: center !important;
+  padding: 0 12px !important;
+}
+
+.chart-stat-strip {
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.chart-stat-strip .chart-stat-grid {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+}
+
+.chart-stat-strip .chart-stat {
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding: 4px 3px !important;
 }

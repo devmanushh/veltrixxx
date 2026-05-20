@@ -88,7 +88,6 @@ export default function MarketStatsBar({
         </div>
         <div className="market-title-block">
           <div className="market-select-row">
-            <strong className="text-strong">{selectedMarket.displaySymbol}</strong>
             <select
               value={selectedMarket.symbol}
               onChange={(event) => onMarketChange(event.target.value)}
@@ -101,11 +100,6 @@ export default function MarketStatsBar({
                 </option>
               ))}
             </select>
-            {selectedMarket.leverage && (
-              <span className="leverage-badge">
-                {selectedMarket.leverage}
-              </span>
-            )}
           </div>
           <strong className="market-num market-price">{formatPrice(referencePrice)}</strong>
         </div>
