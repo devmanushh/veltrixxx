@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { clearAuthSession, setAuthCookie } from "@/auth/lib/auth";
+import { clearAuthSession, setAuthSession } from "@/auth/lib/auth";
 import { loginUser } from "@/lib/api";
 import { routes } from "@/routes";
 
@@ -16,7 +16,7 @@ export default function LoginForm() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    clearAuthSession();
+    void clearAuthSession();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,9 +28,8 @@ export default function LoginForm() {
     try {
       const data = await loginUser(email, password);
 
-      localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      setAuthCookie(data.token);
+      await setAuthSession(data.token);
       toast.success("Signed in");
 
       const params = new URLSearchParams(window.location.search);

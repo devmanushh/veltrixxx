@@ -127,6 +127,8 @@ export class MatchingEngine {
       // remove maker if filled
       if (maker.isFilled()) {
         this.orderBook.popBestAsk();
+      } else {
+        this.orderBook.emitOrderUpdate(maker.id);
       }
     }
   }
@@ -178,6 +180,8 @@ export class MatchingEngine {
 
       if (maker.isFilled()) {
         this.orderBook.popBestBid();
+      } else {
+        this.orderBook.emitOrderUpdate(maker.id);
       }
     }
   }

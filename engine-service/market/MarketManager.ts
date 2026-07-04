@@ -35,11 +35,15 @@ export class MarketManager {
   /**
    * Cancel order
    */
-  cancel(symbol: string, orderId: number): boolean {
+  cancel(symbol: string, orderId: string): boolean {
     const market = this.markets.get(symbol);
     if (!market) return false;
 
     return market.cancelOrder(orderId);
+  }
+
+  hasOrder(symbol: string, orderId: string): boolean {
+    return this.markets.get(symbol)?.hasOrder(orderId) ?? false;
   }
 
   /**

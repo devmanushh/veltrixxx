@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { removeAuthCookie } from "@/auth/lib/auth";
+import { clearAuthSession } from "@/auth/lib/auth";
 import Logo from "@/components/Logo";
 import { primaryNavRoutes, routes } from "@/routes";
 import { useWalletStore } from "@/wallet/stores/walletStore";
@@ -79,11 +79,9 @@ export default function Header() {
     toast.message(`${nextTheme === "dark" ? "Dark" : "Light"} theme enabled`);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
     resetWallet();
-    removeAuthCookie();
+    await clearAuthSession();
     toast.message("Signed out");
     router.push(routes.login);
     router.refresh();

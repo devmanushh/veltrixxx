@@ -11,8 +11,8 @@ export class Trade {
   public buyerId: string;
   public sellerId: string;
 
-  public buyOrderId: number;
-  public sellOrderId: number;
+  public buyOrderId: string;
+  public sellOrderId: string;
   public buyOrderDbId: string;
   public sellOrderDbId: string;
   public buyOrderRemaining: number;
@@ -28,8 +28,8 @@ export class Trade {
     quantity: Quantity;
     buyerId: string;
     sellerId: string;
-    buyOrderId: number;
-    sellOrderId: number;
+    buyOrderId: string;
+    sellOrderId: string;
     buyOrderDbId: string;
     sellOrderDbId: string;
     buyOrderRemaining: number;

@@ -1,5 +1,6 @@
 import { Redis } from "ioredis";
 import { ENV } from "../../packages/config/env.js";
+import { ENGINE_EVENT_TYPES, STREAMS } from "../../packages/redis/channels.js";
 import { Trade } from "../matching/Trade.js";
 
 export const pub = new Redis(ENV.REDIS_URL, {
@@ -14,29 +15,30 @@ pub.on("error", (err: Error) => {
 
 const ensurePublisher = async () => {
   if (pub.status === "ready" || pub.status === "connect") {
-    return true;
-  }
-
-  try {
-    await pub.connect();
-    return true;
-  } catch {
-    console.warn("Redis is unavailable; skipping trade publish.");
-    return false;
-  }
-};
-
-/**
- * Generic publish
- */
-export const publish = async (channel: string, data: unknown) => {
-  if (!(await ensurePublisher())) {
     return;
   }
 
-  await pub.publish(channel, JSON.stringify(data));
+  await pub.connect();
+};
+
+export const appendStreamEvent = async (stream: string, eventType: string, data: unknown) => {
+  await ensurePublisher();
+  await pub.xadd(stream, "*", "type", eventType, "payload", JSON.stringify(data));
+};
+
+export const publishTradeEvent = async (trade: Trade) => {
+  await appendStreamEvent(STREAMS.TRADE_EVENTS, ENGINE_EVENT_TYPES.TRADE, trade);
 };
 
 export const publishTrades = async (trades: Trade[]) => {
-  await publish("trades", trades);
+  await Promise.all(trades.map((trade) => publishTradeEvent(trade)));
+};
+
+export const publish = async (channel: string, data: unknown) => {
+  if (channel === "trades") {
+    await appendStreamEvent(STREAMS.TRADE_EVENTS, ENGINE_EVENT_TYPES.TRADE, data);
+    return;
+  }
+
+  throw new Error(`Unsupported volatile publish channel: ${channel}`);
 };

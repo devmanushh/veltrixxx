@@ -1,11 +1,25 @@
 import { redis } from "./client.js";
-import { CHANNELS } from "./channels.js";
+import { ENGINE_EVENT_TYPES, ORDER_COMMAND_TYPES, STREAMS } from "./channels.js";
 import type { Order, Trade } from "../types/index.js";
 
-export const publishOrder = (order: Order) => {
-  redis.publish(CHANNELS.ORDERS, JSON.stringify(order));
+export const publishOrder = async (order: Order) => {
+  await redis.xadd(
+    STREAMS.ORDER_COMMANDS,
+    "*",
+    "type",
+    ORDER_COMMAND_TYPES.PLACE,
+    "payload",
+    JSON.stringify(order)
+  );
 };
 
-export const publishTrade = (trade: Trade) => {
-  redis.publish(CHANNELS.TRADES, JSON.stringify(trade));
+export const publishTrade = async (trade: Trade) => {
+  await redis.xadd(
+    STREAMS.TRADE_EVENTS,
+    "*",
+    "type",
+    ENGINE_EVENT_TYPES.TRADE,
+    "payload",
+    JSON.stringify(trade)
+  );
 };

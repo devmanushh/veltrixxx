@@ -30,14 +30,7 @@ export const useWalletStore = create<WalletState>((set) => ({
   loadWallet: async () => {
     try {
       set({ loading: true, error: "" });
-      const token = localStorage.getItem("token") || "";
-
-      if (!token) {
-        set({ wallet: null, loading: false, error: "Login required" });
-        return;
-      }
-
-      const data = await getWallet(token);
+      const data = await getWallet();
       set({ wallet: data.wallet || null, loading: false });
     } catch (err) {
       set({

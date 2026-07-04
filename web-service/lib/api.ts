@@ -65,7 +65,7 @@ const isAuthTokenError = (res: Response, error: string) =>
   res.status === 401 && ["Invalid token", "No token"].includes(error);
 
 const handleExpiredSession = () => {
-  clearAuthSession();
+  void clearAuthSession();
 
   if (typeof window === "undefined") {
     return;
@@ -102,8 +102,16 @@ const parseJsonResponse = async <T>(res: Response, fallbackMessage: string): Pro
   return data as T;
 };
 
-const authHeaders = (token: string) => ({
-  Authorization: `Bearer ${token}`,
+const authHeaders = (token?: string): Record<string, string> =>
+  token
+    ? {
+        Authorization: `Bearer ${token}`,
+      }
+    : {};
+
+const jsonHeaders = (token?: string): Record<string, string> => ({
+  "Content-Type": "application/json",
+  ...authHeaders(token),
 });
 
 /**
@@ -113,6 +121,7 @@ export const loginUser = async (email: string, password: string) => {
   try {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -129,6 +138,7 @@ export const registerUser = async (email: string, password: string) => {
   try {
     const res = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -146,50 +156,52 @@ export const registerUser = async (email: string, password: string) => {
  */
 export const placeOrder = async (
   order: OrderInput,
-  token: string,
+  token?: string,
   marketKind: MarketKind = "spot",
   apiSymbol = normalizeMarketApiSymbol(String(order.symbol || ""))
 ) => {
   const endpoint = getOrderEndpointPath(marketKind, { apiSymbol });
   const res = await fetch(`${API_URL}${endpoint}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(token),
-    },
+    credentials: "include",
+    headers: jsonHeaders(token),
     body: JSON.stringify(order),
   });
 
   return parseJsonResponse<OrderResponse>(res, "Order failed");
 };
 
-export const getWallet = async (token: string) => {
+export const getWallet = async (token?: string) => {
   const res = await fetch(`${API_URL}/wallet`, {
+    credentials: "include",
     headers: authHeaders(token),
   });
 
   return parseJsonResponse<WalletResponse>(res, "Wallet failed");
 };
 
-export const getOpenOrders = async (token: string) => {
+export const getOpenOrders = async (token?: string) => {
   const res = await fetch(`${API_URL}/activity/orders/open`, {
+    credentials: "include",
     headers: authHeaders(token),
   });
 
   return parseJsonResponse<OpenOrdersResponse>(res, "Orders failed");
 };
 
-export const cancelOrder = async (token: string, orderId: string) => {
+export const cancelOrder = async (orderId: string, token?: string) => {
   const res = await fetch(`${API_URL}/order/${encodeURIComponent(orderId)}`, {
     method: "DELETE",
+    credentials: "include",
     headers: authHeaders(token),
   });
 
   return parseJsonResponse<OrderResponse>(res, "Cancel order failed");
 };
 
-export const getTradeHistory = async (token: string) => {
+export const getTradeHistory = async (token?: string) => {
   const res = await fetch(`${API_URL}/activity/trades/history`, {
+    credentials: "include",
     headers: authHeaders(token),
   });
 
@@ -219,26 +231,22 @@ export const getMarketStats = async (symbols: string[]) => {
   return parseJsonResponse<MarketStatsResponse>(res, "Market stats failed");
 };
 
-export const createStripeCheckout = async (token: string, amountUsd: number) => {
+export const createStripeCheckout = async (amountUsd: number, token?: string) => {
   const res = await fetch(`${API_URL}/payments/stripe/checkout`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(token),
-    },
+    credentials: "include",
+    headers: jsonHeaders(token),
     body: JSON.stringify({ amountUsd }),
   });
 
   return parseJsonResponse<StripeCheckoutResponse>(res, "Payment failed");
 };
 
-export const confirmStripeCheckout = async (token: string, sessionId: string) => {
+export const confirmStripeCheckout = async (sessionId: string, token?: string) => {
   const res = await fetch(`${API_URL}/payments/stripe/confirm`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(token),
-    },
+    credentials: "include",
+    headers: jsonHeaders(token),
     body: JSON.stringify({ sessionId }),
   });
 

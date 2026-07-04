@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { cancelOrderService, placeOrderService } from "./order.service.js";
-import { pub } from "../lib/redis.js";
 import { generateId } from "../../packages/utils/generateId.js";
 import { validateOrder } from "../../packages/validators/order.validator.js";
 import type { Order } from "../../packages/types/order.types.js";
@@ -14,10 +13,8 @@ export const createOrder = async (req: Request, res: Response) => {
     const user = getAuthUser(req as AuthenticatedRequest, res);
     if (!user) return;
 
-    // 1. Validate input
     validateOrder(req.body);
 
-    // 2. Build order
     const order: Order = {
       id: generateId(),
       userId: user.userId,
@@ -30,7 +27,6 @@ export const createOrder = async (req: Request, res: Response) => {
       status: "OPEN",
     };
 
-    // 3. Send to service (publishes to Redis)
     await placeOrderService(order);
 
     return res.json({
@@ -65,25 +61,11 @@ export const cancelOrder = async (req: Request, res: Response) => {
       userId: user.userId,
     });
 
-    try {
-      await pub.publish(
-        "cancel_orders",
-        JSON.stringify({
-          orderId: result.order.id,
-          symbol: result.order.symbol,
-          userId: user.userId,
-        })
-      );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "unknown error";
-      console.warn("Cancel order persisted but Redis publish failed:", message);
-    }
-
     return res.json({
       success: true,
       orderId: result.order.id,
       refunded: result.refunded,
-      message: "Order cancelled",
+      message: "Cancel requested",
     });
 
   } catch (err) {

@@ -15,13 +15,9 @@ type IncomingOrder = {
 
 const toEngineOrder = (incoming: IncomingOrder) => {
   const dbId = String(incoming.id ?? Date.now());
-  const numericId =
-    typeof incoming.id === "number"
-      ? incoming.id
-      : Number.parseInt(dbId.replace(/\D/g, ""), 10);
 
   return new Order({
-    id: Number.isFinite(numericId) ? numericId : Date.now(),
+    id: dbId,
     dbId,
     userId: incoming.userId,
     symbol: incoming.symbol,

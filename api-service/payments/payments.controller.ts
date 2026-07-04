@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import crypto from "node:crypto";
 import { ENV } from "../../packages/config/env.js";
 import { db, type DbTransactionClient } from "../../packages/db/client.js";
+import { toNumber } from "../../packages/utils/decimal.js";
 import { getAuthUser, sendError, type AuthenticatedRequest } from "../lib/http.js";
 
 type StripeCheckoutSession = {
@@ -16,6 +17,21 @@ type StripeCheckoutSession = {
   };
   error?: {
     message?: string;
+  };
+};
+
+class PaymentOwnershipError extends Error {
+  constructor() {
+    super("Payment session does not belong to this user");
+  }
+}
+
+const serializeWallet = <T extends { balance: Parameters<typeof toNumber>[0] } | null>(wallet: T) => {
+  if (!wallet) return wallet;
+
+  return {
+    ...wallet,
+    balance: toNumber(wallet.balance),
   };
 };
 
@@ -35,13 +51,35 @@ const getStripeSession = async (sessionId: string) => {
   return session;
 };
 
-const creditCompletedStripeSession = async (session: StripeCheckoutSession) => {
+const getStripeBoundUserId = (session: StripeCheckoutSession) => {
+  return String(session.metadata?.userId || session.client_reference_id || "");
+};
+
+const getAllowedOrigins = () => {
+  return ENV.CORS_ORIGIN.split(",")
+    .map((origin) => origin.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+};
+
+const getCheckoutAppUrl = (req: Request) => {
+  const origin = String(req.headers.origin || "").replace(/\/+$/, "");
+
+  if (origin && getAllowedOrigins().includes(origin)) {
+    return origin;
+  }
+
+  return ENV.APP_URL;
+};
+const creditCompletedStripeSession = async (
+  session: StripeCheckoutSession,
+  expectedUserId?: string
+) => {
   const sessionId = String(session.id || "");
-  const userId = String(session.metadata?.userId || session.client_reference_id || "");
+  const stripeBoundUserId = getStripeBoundUserId(session);
   const amountUsd = Number(session.amount_total || 0) / 100;
   const isPaid = session.payment_status === "paid" || session.status === "complete";
 
-  if (!sessionId || !userId || !Number.isFinite(amountUsd) || amountUsd <= 0 || !isPaid) {
+  if (!sessionId || !Number.isFinite(amountUsd) || amountUsd <= 0 || !isPaid) {
     throw new Error("Stripe session is not paid yet");
   }
 
@@ -50,20 +88,30 @@ const creditCompletedStripeSession = async (session: StripeCheckoutSession) => {
       where: { stripeSessionId: sessionId },
     });
 
+    const ownerUserId = existingTopUp?.userId || stripeBoundUserId;
+
+    if (!ownerUserId) {
+      throw new Error("Payment session has no Veltrix user binding");
+    }
+
+    if (expectedUserId && ownerUserId !== expectedUserId) {
+      throw new PaymentOwnershipError();
+    }
+
     if (existingTopUp?.status === "COMPLETED") {
       const wallet = await tx.user.findUnique({
-        where: { id: userId },
+        where: { id: ownerUserId },
         select: { id: true, email: true, balance: true },
       });
 
-      return { wallet, credited: false };
+      return { wallet: serializeWallet(wallet), credited: false };
     }
 
     await tx.paymentTopUp.upsert({
       where: { stripeSessionId: sessionId },
       create: {
         stripeSessionId: sessionId,
-        userId,
+        userId: ownerUserId,
         amountUsd,
         status: "COMPLETED",
         completedAt: new Date(),
@@ -75,7 +123,7 @@ const creditCompletedStripeSession = async (session: StripeCheckoutSession) => {
     });
 
     const wallet = await tx.user.update({
-      where: { id: userId },
+      where: { id: ownerUserId },
       data: {
         balance: {
           increment: amountUsd,
@@ -88,7 +136,7 @@ const creditCompletedStripeSession = async (session: StripeCheckoutSession) => {
       },
     });
 
-    return { wallet, credited: true };
+    return { wallet: serializeWallet(wallet), credited: true };
   });
 };
 
@@ -109,10 +157,11 @@ export const createStripeCheckout = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Top up amount must be at least $5" });
     }
 
+    const appUrl = getCheckoutAppUrl(req);
     const params = new URLSearchParams();
     params.set("mode", "payment");
-    params.set("success_url", `${ENV.APP_URL}/balance?payment=success&session_id={CHECKOUT_SESSION_ID}`);
-    params.set("cancel_url", `${ENV.APP_URL}/balance?payment=cancelled`);
+    params.set("success_url", `${appUrl}/balance?payment=success&session_id={CHECKOUT_SESSION_ID}`);
+    params.set("cancel_url", `${appUrl}/balance?payment=cancelled`);
     params.set("client_reference_id", user.userId);
     params.set("metadata[userId]", user.userId);
     params.set("line_items[0][quantity]", "1");
@@ -174,13 +223,7 @@ export const confirmStripeCheckout = async (req: Request, res: Response) => {
     }
 
     const session = await getStripeSession(sessionId);
-    const sessionUserId = String(session.metadata?.userId || session.client_reference_id || "");
-
-    if (sessionUserId !== user.userId) {
-      return res.status(403).json({ error: "Payment session does not belong to this user" });
-    }
-
-    const result = await creditCompletedStripeSession(session);
+    const result = await creditCompletedStripeSession(session, user.userId);
 
     return res.json({
       success: true,
@@ -188,6 +231,10 @@ export const confirmStripeCheckout = async (req: Request, res: Response) => {
       credited: result.credited,
     });
   } catch (err) {
+    if (err instanceof PaymentOwnershipError) {
+      return res.status(403).json({ error: err.message });
+    }
+
     return sendError(res, err, "Payment confirmation failed", 400);
   }
 };

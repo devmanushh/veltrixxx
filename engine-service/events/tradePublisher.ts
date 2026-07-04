@@ -1,9 +1,12 @@
 import { eventBus } from "./eventEmitter.js";
 import { TRADE_EVENT, TradeEventPayload } from "./tradeEvents.js";
-import { publish } from "../queue/publisher.js";
-
-const TRADE_CHANNEL = "trades";
+import { publishTradeEvent } from "../queue/publisher.js";
 
 eventBus.on<TradeEventPayload>(TRADE_EVENT, async ({ trade }) => {
-  await publish(TRADE_CHANNEL, trade);
+  try {
+    await publishTradeEvent(trade);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "unknown error";
+    console.error("Trade stream publish failed:", message);
+  }
 });

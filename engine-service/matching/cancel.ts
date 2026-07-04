@@ -1,7 +1,7 @@
 import { getLock, removeLock } from "../stores/orderLockStore.js";
 import { getBalance } from "../stores/balanceStore.js";
 
-export const cancelOrderAndRefund = (orderId: number) => {
+export const cancelOrderAndRefund = (orderId: string) => {
   const lock = getLock(orderId);
   if (!lock) return false;
 

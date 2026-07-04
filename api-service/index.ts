@@ -9,8 +9,11 @@ import marketRoutes from "./market/market.routes.js";
 import { handleStripeWebhook } from "./payments/payments.controller.js";
 import { ENV } from "../packages/config/env.js";
 import { db } from "../packages/db/client.js";
+import { startOrderCommandOutboxDispatcher } from "./outbox/orderCommandOutbox.js";
 
 const app = express();
+
+startOrderCommandOutboxDispatcher();
 
 app.use(cors({
   origin: ENV.CORS_ORIGIN.split(",").map((origin) => origin.trim()),
@@ -22,7 +25,7 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/order", orderRoutes);
 app.use("/spot/:market/order", orderRoutes);
-app.use("/future/:market/order", orderRoutes);
+
 app.use("/wallet", walletRoutes);
 app.use("/activity", activityRoutes);
 app.use("/payments", paymentRoutes);

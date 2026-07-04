@@ -24,6 +24,7 @@ export default function OrderForm({ marketKind }: OrderFormProps) {
 
   const orderValue = Number(price || 0) * Number(quantity || 0);
   const valueUnit = marketKind === "spot" ? "USDT" : "DEV";
+  const futuresDisabled = marketKind === "futures";
 
   useEffect(() => {
     setPrice(referencePrice ? String(referencePrice) : "");
@@ -31,13 +32,18 @@ export default function OrderForm({ marketKind }: OrderFormProps) {
   }, [market.symbol, referencePrice]);
 
   const sendOrder = async (side: "buy" | "sell") => {
+    if (futuresDisabled) {
+      const message = "Futures orders are unavailable";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess("");
 
     try {
-      const token = localStorage.getItem("token");
-
       const order: OrderInput = {
         symbol: market.symbol,
         price: Number(price),
@@ -46,7 +52,7 @@ export default function OrderForm({ marketKind }: OrderFormProps) {
         type: "limit",
       };
 
-      const res = await placeOrder(order, token || "", marketKind, market.apiSymbol);
+      const res = await placeOrder(order, undefined, marketKind, market.apiSymbol);
 
       setSuccess(res.message || "Order sent");
       await refreshWallet();
@@ -70,7 +76,7 @@ export default function OrderForm({ marketKind }: OrderFormProps) {
       <div className="order-form-header">
         <h2 className="panel-title">{marketKind === "spot" ? "Spot Trading" : "Futures Trading"}</h2>
         <p className="text-muted">
-          {market.selectorLabel} limit order
+          {futuresDisabled ? "Market data only" : `${market.selectorLabel} limit order`}
         </p>
       </div>
 
@@ -105,7 +111,7 @@ export default function OrderForm({ marketKind }: OrderFormProps) {
       <div className="market-stack-actions">
         <button
           type="button"
-          disabled={loading}
+          disabled={loading || futuresDisabled}
           onClick={() => sendOrder("buy")}
           className="buy-button"
         >
@@ -114,7 +120,7 @@ export default function OrderForm({ marketKind }: OrderFormProps) {
 
         <button
           type="button"
-          disabled={loading}
+          disabled={loading || futuresDisabled}
           onClick={() => sendOrder("sell")}
           className="sell-button"
         >

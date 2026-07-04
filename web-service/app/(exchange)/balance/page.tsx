@@ -26,13 +26,12 @@ export default function Page() {
     const initializeWalletPage = async () => {
       try {
         setError("");
-        const token = localStorage.getItem("token") || "";
         const params = new URLSearchParams(window.location.search);
         const sessionId = params.get("session_id");
         const payment = params.get("payment");
 
         if (payment === "success" && sessionId) {
-          const confirmed = await confirmStripeCheckout(token, sessionId);
+          const confirmed = await confirmStripeCheckout(sessionId);
           setWallet(confirmed.wallet);
           window.dispatchEvent(new Event("veltrix:wallet-updated"));
           const nextMessage = confirmed.credited ? "Wallet topped up successfully." : "Payment already added to wallet.";
@@ -65,8 +64,7 @@ export default function Page() {
     setMessage("");
 
     try {
-      const token = localStorage.getItem("token") || "";
-      const data = await createStripeCheckout(token, Number(amountUsd));
+      const data = await createStripeCheckout(Number(amountUsd));
       toast.message("Opening Stripe checkout");
       window.location.href = data.url;
     } catch (err) {

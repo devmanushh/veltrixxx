@@ -13,6 +13,7 @@ export type OrderStatus =
   | "OPEN"
   | "PARTIALLY_FILLED"
   | "FILLED"
+  | "CANCEL_PENDING"
   | "CANCELLED";
 
 export type MarketSymbol = string; // e.g. "BTC-USDT"

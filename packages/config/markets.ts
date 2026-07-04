@@ -162,5 +162,10 @@ export const getDefaultMarket = (kind: MarketKind) => getMarketsByKind(kind)[0];
 export const getMarketRoutePath = (kind: MarketKind, market: Pick<MarketConfig, "apiSymbol">) =>
   `/${kind === "spot" ? "spot" : "future"}/${market.apiSymbol}`;
 
-export const getOrderEndpointPath = (kind: MarketKind, market: Pick<MarketConfig, "apiSymbol">) =>
-  `${getMarketRoutePath(kind, market)}/order`;
+export const getOrderEndpointPath = (kind: MarketKind, market: Pick<MarketConfig, "apiSymbol">) => {
+  if (kind !== "spot") {
+    throw new Error("Futures orders are not supported until positions, margin, funding, and liquidation are modeled.");
+  }
+
+  return `${getMarketRoutePath(kind, market)}/order`;
+};

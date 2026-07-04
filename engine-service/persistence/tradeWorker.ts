@@ -1,150 +1,295 @@
 import { Redis } from "ioredis";
 import { db, type DbTransactionClient } from "../../packages/db/client.js";
 import { ENV } from "../../packages/config/env.js";
+import { ENGINE_EVENT_TYPES, GROUPS, STREAMS } from "../../packages/redis/channels.js";
 import { parseMarketAssets } from "../../packages/utils/parseMarketAssets.js";
+import { toNumber } from "../../packages/utils/decimal.js";
+import { eventBus } from "../events/eventEmitter.js";
+import { TRADE_EVENT, type TradeEventPayload } from "../events/tradeEvents.js";
+import { enqueueSettlement } from "./settlementQueue.js";
 
-const sub = new Redis(ENV.REDIS_URL, {
+const redis = new Redis(ENV.REDIS_URL, {
   lazyConnect: true,
   enableOfflineQueue: false,
   maxRetriesPerRequest: 1,
 });
 
-const TRADE_CHANNEL = "trades";
-let tradePersistQueue = Promise.resolve();
+const CONSUMER_NAME = process.env.TRADE_PERSISTENCE_CONSUMER_NAME || "trade-persistence-main";
 
-sub.on("error", (err: Error) => {
+type StreamMessage = {
+  id: string;
+  fields: Record<string, string>;
+};
+
+type RawStreamResponse = [string, [string, string[]][]][];
+
+redis.on("error", (err: Error) => {
   console.error("Trade worker Redis error:", err.message);
 });
 
-export const startTradeWorker = async () => {
+const ensureGroup = async () => {
   try {
-    if (sub.status !== "ready") {
-      await sub.connect();
-    }
-
-    await sub.subscribe(TRADE_CHANNEL);
-  } catch {
-    console.warn("Redis is unavailable; trade persistence worker is paused.");
+    await redis.xgroup("CREATE", STREAMS.TRADE_EVENTS, GROUPS.TRADE_PERSISTENCE, "0", "MKSTREAM");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (!message.includes("BUSYGROUP")) throw err;
   }
 };
 
-const persistTrade = async (message: string) => {
-  try {
-    const trade = JSON.parse(message);
-    const buyOrderStatus = trade.buyOrderRemaining > 0 ? "PARTIALLY_FILLED" : "FILLED";
-    const sellOrderStatus = trade.sellOrderRemaining > 0 ? "PARTIALLY_FILLED" : "FILLED";
-    const { base } = parseMarketAssets(trade.symbol);
-    const cost = Number(trade.price) * Number(trade.quantity);
+const fieldsToRecord = (fields: string[]) => {
+  const record: Record<string, string> = {};
 
-    await db.$transaction(async (tx: DbTransactionClient) => {
-      const existingTrade = await tx.trade.findUnique({
-        where: { id: trade.id.toString() },
-      });
+  for (let i = 0; i < fields.length; i += 2) {
+    const key = fields[i];
+    const value = fields[i + 1];
+    if (key && value !== undefined) {
+      record[key] = value;
+    }
+  }
 
-      if (existingTrade) return;
+  return record;
+};
 
-      const [buyOrder, sellOrder] = await Promise.all([
-        tx.order.findUnique({ where: { id: trade.buyOrderDbId } }),
-        tx.order.findUnique({ where: { id: trade.sellOrderDbId } }),
-      ]);
+const parseStreamResponse = (response: unknown): StreamMessage[] => {
+  if (!response) return [];
 
-      if (!buyOrder || !sellOrder) {
-        throw new Error("Matched order is missing from persistence");
-      }
+  const streams = response as RawStreamResponse;
+  return streams.flatMap(([, messages]) =>
+    messages.map(([id, fields]) => ({
+      id,
+      fields: fieldsToRecord(fields),
+    }))
+  );
+};
 
-      const nextBuyLockedQuote = Math.max(Number(buyOrder.lockedQuote || 0) - cost, 0);
-      const buyRefund = trade.buyOrderRemaining > 0 ? 0 : nextBuyLockedQuote;
-      const nextSellLockedBase = Math.max(Number(sellOrder.lockedBase || 0) - Number(trade.quantity), 0);
+const readMessages = async (id: ">" | "0", blockMs?: number) => {
+  const response = blockMs
+    ? await redis.xreadgroup(
+        "GROUP",
+        GROUPS.TRADE_PERSISTENCE,
+        CONSUMER_NAME,
+        "COUNT",
+        10,
+        "BLOCK",
+        blockMs,
+        "STREAMS",
+        STREAMS.TRADE_EVENTS,
+        id
+      )
+    : await redis.xreadgroup(
+        "GROUP",
+        GROUPS.TRADE_PERSISTENCE,
+        CONSUMER_NAME,
+        "COUNT",
+        10,
+        "STREAMS",
+        STREAMS.TRADE_EVENTS,
+        id
+      );
 
-      await tx.trade.create({
-        data: {
-          id: trade.id.toString(),
-          buyerId: trade.buyerId,
-          sellerId: trade.sellerId,
-          symbol: trade.symbol,
-          price: trade.price,
-          quantity: trade.quantity,
-          createdAt: new Date(trade.timestamp),
-        },
-      });
+  return parseStreamResponse(response);
+};
 
-      await tx.order.update({
-        where: { id: trade.buyOrderDbId },
-        data: {
-          status: buyOrderStatus,
-          remaining: trade.buyOrderRemaining,
-          lockedQuote: trade.buyOrderRemaining > 0 ? nextBuyLockedQuote : 0,
-        },
-      });
+const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => {
+  const trade = typeof tradeInput === "string" ? JSON.parse(tradeInput) : tradeInput;
+  const buyOrderStatus = trade.buyOrderRemaining > 0 ? "PARTIALLY_FILLED" : "FILLED";
+  const sellOrderStatus = trade.sellOrderRemaining > 0 ? "PARTIALLY_FILLED" : "FILLED";
+  const { base } = parseMarketAssets(trade.symbol);
+  const cost = Number(trade.price) * Number(trade.quantity);
 
-      await tx.order.update({
-        where: { id: trade.sellOrderDbId },
-        data: {
-          status: sellOrderStatus,
-          remaining: trade.sellOrderRemaining,
-          lockedBase: nextSellLockedBase,
-        },
-      });
-
-      if (buyRefund > 0) {
-        await tx.user.update({
-          where: { id: trade.buyerId },
-          data: {
-            balance: {
-              increment: buyRefund,
-            },
-          },
-        });
-      }
-
-      await tx.assetBalance.upsert({
-        where: {
-          userId_asset: {
-            userId: trade.buyerId,
-            asset: base,
-          },
-        },
-        create: {
-          userId: trade.buyerId,
-          asset: base,
-          free: trade.quantity,
-          locked: 0,
-        },
-        update: {
-          free: {
-            increment: trade.quantity,
-          },
-        },
-      });
-
-      await tx.assetBalance.updateMany({
-        where: {
-          userId: trade.sellerId,
-          asset: base,
-        },
-        data: {
-          locked: {
-            decrement: trade.quantity,
-          },
-        },
-      });
-
-      await tx.user.update({
-        where: { id: trade.sellerId },
-        data: {
-          balance: {
-            increment: cost,
-          },
-        },
-      });
+  await db.$transaction(async (tx: DbTransactionClient) => {
+    const existingTrade = await tx.trade.findUnique({
+      where: { id: trade.id.toString() },
     });
 
-    console.log("Trade saved:", trade.id);
-  } catch (err) {
-    console.error("Trade persist error:", err);
+    if (existingTrade) return;
+
+    const [buyOrder, sellOrder] = await Promise.all([
+      tx.order.findUnique({ where: { id: trade.buyOrderDbId } }),
+      tx.order.findUnique({ where: { id: trade.sellOrderDbId } }),
+    ]);
+
+    if (!buyOrder || !sellOrder) {
+      throw new Error("Matched order is missing from persistence");
+    }
+
+    if (buyOrder.status === "CANCELLED" || sellOrder.status === "CANCELLED") {
+      throw new Error("Matched order was cancelled before settlement");
+    }
+
+    const nextBuyLockedQuote = Math.max(toNumber(buyOrder.lockedQuote) - cost, 0);
+    const buyRefund = trade.buyOrderRemaining > 0 ? 0 : nextBuyLockedQuote;
+    const nextSellLockedBase = Math.max(toNumber(sellOrder.lockedBase) - Number(trade.quantity), 0);
+
+    const buyOrderUpdate = await tx.order.updateMany({
+      where: {
+        id: trade.buyOrderDbId,
+        status: {
+          not: "CANCELLED",
+        },
+      },
+      data: {
+        status: buyOrderStatus,
+        remaining: trade.buyOrderRemaining,
+        lockedQuote: trade.buyOrderRemaining > 0 ? nextBuyLockedQuote : 0,
+      },
+    });
+
+    const sellOrderUpdate = await tx.order.updateMany({
+      where: {
+        id: trade.sellOrderDbId,
+        status: {
+          not: "CANCELLED",
+        },
+      },
+      data: {
+        status: sellOrderStatus,
+        remaining: trade.sellOrderRemaining,
+        lockedBase: nextSellLockedBase,
+      },
+    });
+
+    if (buyOrderUpdate.count !== 1 || sellOrderUpdate.count !== 1) {
+      throw new Error("Matched order changed before settlement");
+    }
+
+    await tx.trade.create({
+      data: {
+        id: trade.id.toString(),
+        buyerId: trade.buyerId,
+        sellerId: trade.sellerId,
+        symbol: trade.symbol,
+        price: trade.price,
+        quantity: trade.quantity,
+        createdAt: new Date(trade.timestamp),
+      },
+    });
+
+    if (buyRefund > 0) {
+      await tx.user.update({
+        where: { id: trade.buyerId },
+        data: {
+          balance: {
+            increment: buyRefund,
+          },
+        },
+      });
+    }
+
+    await tx.assetBalance.upsert({
+      where: {
+        userId_asset: {
+          userId: trade.buyerId,
+          asset: base,
+        },
+      },
+      create: {
+        userId: trade.buyerId,
+        asset: base,
+        free: trade.quantity,
+        locked: 0,
+      },
+      update: {
+        free: {
+          increment: trade.quantity,
+        },
+      },
+    });
+
+    const sellerDebit = await tx.assetBalance.updateMany({
+      where: {
+        userId: trade.sellerId,
+        asset: base,
+        locked: {
+          gte: trade.quantity,
+        },
+      },
+      data: {
+        locked: {
+          decrement: trade.quantity,
+        },
+      },
+    });
+
+    if (sellerDebit.count !== 1) {
+      throw new Error("Seller locked balance was insufficient for settlement");
+    }
+
+    await tx.user.update({
+      where: { id: trade.sellerId },
+      data: {
+        balance: {
+          increment: cost,
+        },
+      },
+    });
+  });
+
+  console.log("Trade saved:", trade.id);
+};
+
+const persistStreamMessage = async (message: StreamMessage) => {
+  if (message.fields.type !== ENGINE_EVENT_TYPES.TRADE) {
+    await redis.xack(STREAMS.TRADE_EVENTS, GROUPS.TRADE_PERSISTENCE, message.id);
+    return;
+  }
+
+  await enqueueSettlement(() => persistTrade(message.fields.payload || "{}"));
+  await redis.xack(STREAMS.TRADE_EVENTS, GROUPS.TRADE_PERSISTENCE, message.id);
+};
+
+const processMessages = async (messages: StreamMessage[]) => {
+  let failures = 0;
+
+  for (const message of messages) {
+    try {
+      await persistStreamMessage(message);
+    } catch (err) {
+      failures++;
+      const errorMessage = err instanceof Error ? err.message : "unknown error";
+      console.error(`Trade stream message ${message.id} failed:`, errorMessage);
+    }
+  }
+
+  return failures;
+};
+
+const drainPending = async () => {
+  while (true) {
+    const messages = await readMessages("0");
+    if (messages.length === 0) return;
+
+    const failures = await processMessages(messages);
+    if (failures > 0) return;
   }
 };
 
-sub.on("message", (_: string, message: string) => {
-  tradePersistQueue = tradePersistQueue.then(() => persistTrade(message));
+const consumeLoop = async () => {
+  while (true) {
+    const messages = await readMessages(">", 5_000);
+    await processMessages(messages);
+  }
+};
+
+export const startTradeWorker = async () => {
+  try {
+    if (redis.status !== "ready") {
+      await redis.connect();
+    }
+
+    await ensureGroup();
+    await drainPending();
+
+    void consumeLoop();
+    console.log(`Consuming ${STREAMS.TRADE_EVENTS} as ${GROUPS.TRADE_PERSISTENCE}/${CONSUMER_NAME}`);
+  } catch {
+    console.warn("Redis is unavailable; trade persistence stream worker is paused.");
+  }
+};
+
+eventBus.on<TradeEventPayload>(TRADE_EVENT, ({ trade }) => {
+  void enqueueSettlement(() => persistTrade(trade)).catch((err) => {
+    const message = err instanceof Error ? err.message : "unknown error";
+    console.error("Trade persist error:", message);
+  });
 });

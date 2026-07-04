@@ -1,9 +1,22 @@
-import { ensureRedisConnection, pub } from "../lib/redis.js";
-// import type { Order } from "@veltrix/types";
+import { ORDER_COMMAND_TYPES } from "../../packages/redis/channels.js";
+import type { DbTransactionClient } from "../../packages/db/client.js";
 import type { Order } from "../../packages/types/index.js";
+import { enqueueOrderCommand } from "../outbox/orderCommandOutbox.js";
 
+export const enqueuePlaceOrderCommand = async (
+  tx: DbTransactionClient,
+  order: Order
+) => {
+  await enqueueOrderCommand(tx, ORDER_COMMAND_TYPES.PLACE, order);
+};
 
-export const sendOrderToEngine = async (order: Order) => {
-  await ensureRedisConnection();
-  await pub.publish("orders", JSON.stringify(order));
+export const enqueueCancelOrderCommand = async (
+  tx: DbTransactionClient,
+  payload: {
+    orderId: string;
+    symbol: string;
+    userId: string;
+  }
+) => {
+  await enqueueOrderCommand(tx, ORDER_COMMAND_TYPES.CANCEL, payload);
 };

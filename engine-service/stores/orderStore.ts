@@ -1,15 +1,15 @@
 import { Order } from "../matching/Order.js";
 
-const orders: Record<number, Order> = {};
+const orders: Record<string, Order> = {};
 
 export const addOrder = (order: Order) => {
   orders[order.id] = order;
 };
 
-export const updateOrder = (id: number, quantity: number) => {
+export const updateOrder = (id: string, quantity: number) => {
   if (orders[id]) {
     orders[id].quantity = quantity;
   }
 };
 
-export const getOrder = (id: number) => orders[id];
+export const getOrder = (id: string) => orders[id];

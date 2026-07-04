@@ -5,7 +5,7 @@ import { createLock } from "../stores/orderLockStore.js";
  * Validate + lock funds BEFORE matching
  */
 export const validateAndLock = (order: {
-  id: number; // ⚠️ REQUIRED for lock tracking
+  id: string; // ⚠️ REQUIRED for lock tracking
   userId: string;
   symbol: string;
   side: "BUY" | "SELL";

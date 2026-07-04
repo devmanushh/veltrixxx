@@ -10,7 +10,7 @@ model User {
   id       String @id @default(cuid())
   email    String @unique
   password String
-  balance  Float  @default(0)
+  balance  Decimal  @default(0) @db.Decimal(36, 18)
 
   orders Order[]
   buyerTrades  Trade[] @relation("BuyerTrades")
@@ -25,11 +25,11 @@ model Order {
   user   User @relation(fields: [userId], references: [id])
 
   symbol   String
-  price    Float?
-  quantity Float
-  remaining Float @default(0)
-  lockedQuote Float @default(0)
-  lockedBase Float @default(0)
+  price    Decimal? @db.Decimal(36, 18)
+  quantity Decimal @db.Decimal(36, 18)
+  remaining Decimal @default(0) @db.Decimal(36, 18)
+  lockedQuote Decimal @default(0) @db.Decimal(36, 18)
+  lockedBase Decimal @default(0) @db.Decimal(36, 18)
   side     String
   type     String
   status   String @default("OPEN")
@@ -42,8 +42,8 @@ model AssetBalance {
   user   User @relation(fields: [userId], references: [id])
 
   asset  String
-  free   Float @default(0)
-  locked Float @default(0)
+  free   Decimal @default(0) @db.Decimal(36, 18)
+  locked Decimal @default(0) @db.Decimal(36, 18)
 
   @@unique([userId, asset])
 }
@@ -55,8 +55,8 @@ model Trade {
   sellerId String
 
   symbol   String
-  price    Float
-  quantity Float
+  price    Decimal @db.Decimal(36, 18)
+  quantity Decimal @db.Decimal(36, 18)
 
   createdAt DateTime @default(now())
 
@@ -69,11 +69,11 @@ model Candle {
   symbol   String
   interval String
   bucket   DateTime
-  open     Float
-  high     Float
-  low      Float
-  close    Float
-  volume   Float
+  open     Decimal @db.Decimal(36, 18)
+  high     Decimal @db.Decimal(36, 18)
+  low      Decimal @db.Decimal(36, 18)
+  close    Decimal @db.Decimal(36, 18)
+  volume   Decimal @db.Decimal(36, 18)
   updatedAt DateTime @updatedAt
 
   @@unique([symbol, interval, bucket])
@@ -84,10 +84,23 @@ model PaymentTopUp {
   id              String   @id @default(cuid())
   stripeSessionId String   @unique
   userId          String
-  amountUsd       Float
+  amountUsd       Decimal  @db.Decimal(36, 18)
   status          String   @default("PENDING")
   createdAt       DateTime @default(now())
   completedAt     DateTime?
 
   user User @relation(fields: [userId], references: [id])
+}
+model OutboxEvent {
+  id           String    @id @default(cuid())
+  topic        String
+  eventType    String
+  payload      Json
+  status       String    @default("PENDING")
+  attempts     Int       @default(0)
+  lastError    String?
+  createdAt    DateTime  @default(now())
+  dispatchedAt DateTime?
+
+  @@index([status, createdAt])
 }

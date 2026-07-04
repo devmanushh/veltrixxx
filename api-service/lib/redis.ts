@@ -33,7 +33,17 @@ export const ensureRedisConnection = async () => {
   }
 };
 
-export const publish = async <T>(channel: string, data: T) => {
+export const appendToStream = async <T>(stream: string, fields: Record<string, T>) => {
   await ensureRedisConnection();
-  await pub.publish(channel, JSON.stringify(data));
+
+  const args = Object.entries(fields).flatMap(([key, value]) => [
+    key,
+    typeof value === "string" ? value : JSON.stringify(value),
+  ]);
+
+  await pub.xadd(stream, "*", ...args);
+};
+
+export const publish = async () => {
+  throw new Error("Redis pub/sub is disabled for critical delivery. Use appendToStream or the DB outbox.");
 };

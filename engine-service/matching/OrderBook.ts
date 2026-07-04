@@ -14,7 +14,7 @@ export class OrderBook {
    * orderId → { level, side }
    */
   private orderIndex: Map<
-    number,
+    string,
     { level: PriceLevel; side: "BUY" | "SELL" }
   > = new Map();
 
@@ -67,7 +67,7 @@ export class OrderBook {
   // REMOVE ORDER (CANCEL)
   // ------------------------
 
-  removeOrder(orderId: number): boolean {
+  removeOrder(orderId: string): boolean {
     const entry = this.orderIndex.get(orderId);
     if (!entry) return false;
 
@@ -88,6 +88,18 @@ export class OrderBook {
     }
 
     return removed;
+  }
+
+  hasOrder(orderId: string): boolean {
+    return this.orderIndex.has(orderId);
+  }
+
+  emitOrderUpdate(orderId: string) {
+    const entry = this.orderIndex.get(orderId);
+
+    if (entry) {
+      this.emitLevelUpdate(entry.side, entry.level);
+    }
   }
 
   // ------------------------
@@ -166,7 +178,7 @@ export class OrderBook {
     side: "BUY" | "SELL",
     level: PriceLevel
   ) {
-    const quantity = level.isEmpty() ? 0 : level.getSize();
+    const quantity = level.isEmpty() ? 0 : level.getTotalRemaining();
 
     eventBus.emit(ORDERBOOK_DIFF_EVENT, {
       symbol: this.symbol,

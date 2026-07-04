@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { db } from "../../packages/db/client.js";
+import { toNumber } from "../../packages/utils/decimal.js";
 import { getAuthUser, sendError, type AuthenticatedRequest } from "../lib/http.js";
 
 export const getWallet = async (req: Request, res: Response) => {
@@ -30,7 +31,17 @@ export const getWallet = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Wallet not found" });
     }
 
-    return res.json({ wallet });
+    return res.json({
+      wallet: {
+        ...wallet,
+        balance: toNumber(wallet.balance),
+        assetBalances: wallet.assetBalances.map((assetBalance) => ({
+          ...assetBalance,
+          free: toNumber(assetBalance.free),
+          locked: toNumber(assetBalance.locked),
+        })),
+      },
+    });
   } catch (err) {
     return sendError(res, err, "Wallet failed");
   }

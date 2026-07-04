@@ -27,7 +27,7 @@ export class PriceLevel {
   /**
    * Map for O(1) lookup → orderId → node
    */
-  private orderMap: Map<number, OrderNode> = new Map();
+  private orderMap: Map<string, OrderNode> = new Map();
 
   constructor(price: number) {
     this.price = price;
@@ -83,7 +83,7 @@ export class PriceLevel {
   /**
    * Remove specific order (cancel)
    */
-  remove(orderId: number): boolean {
+  remove(orderId: string): boolean {
     const node = this.orderMap.get(orderId);
     if (!node) return false;
 
@@ -117,6 +117,16 @@ export class PriceLevel {
    */
   getSize(): number {
     return this.size;
+  }
+
+  getTotalRemaining(): number {
+    let total = 0;
+
+    for (const order of this) {
+      total += order.remaining;
+    }
+
+    return total;
   }
 
   /**

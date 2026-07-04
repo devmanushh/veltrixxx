@@ -1,20 +1,25 @@
-// lib/auth.ts
+export const setAuthSession = async (token: string) => {
+  const res = await fetch("/api/auth/session", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ token }),
+  });
 
-export const setAuthCookie = (token: string) => {
-  if (typeof document === "undefined") return;
-  document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Lax`;
+  if (!res.ok) {
+    throw new Error("Could not persist session");
+  }
 };
 
-export const removeAuthCookie = () => {
-  if (typeof document === "undefined") return;
-  document.cookie = "token=; path=/; max-age=0";
-};
-
-export const clearAuthSession = () => {
+export const clearAuthSession = async () => {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("token");
     localStorage.removeItem("user");
   }
 
-  removeAuthCookie();
+  await fetch("/api/auth/session", {
+    method: "DELETE",
+    credentials: "include",
+  }).catch(() => undefined);
 };

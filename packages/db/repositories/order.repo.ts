@@ -27,7 +27,9 @@ export const getOpenOrdersBySymbol = async (symbol: string) => {
   return db.order.findMany({
     where: {
       symbol,
-      status: "OPEN",
+      status: {
+        in: ["OPEN", "PARTIALLY_FILLED", "CANCEL_PENDING"],
+      },
     },
     orderBy: {
       createdAt: "asc",
@@ -39,7 +41,9 @@ export const getOpenOrdersByUser = async (userId: string) => {
   return db.order.findMany({
     where: {
       userId,
-      status: "OPEN",
+      status: {
+        in: ["OPEN", "PARTIALLY_FILLED", "CANCEL_PENDING"],
+      },
     },
     orderBy: {
       createdAt: "desc",

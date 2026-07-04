@@ -9,7 +9,7 @@ import {
 } from "./types.js";
 
 export class Order {
-  public id: number;
+  public id: string;
   public dbId: string;
   public userId: string;
   public symbol: MarketSymbol;
@@ -26,7 +26,7 @@ export class Order {
   public createdAt: Timestamp;
 
   constructor(params: {
-    id: number;
+    id: string;
     dbId?: string;
     userId: string;
     symbol: MarketSymbol;

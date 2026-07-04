@@ -1,9 +1,10 @@
-import { sendOrderToEngine } from "./order.producer.js"; // or same file
+import { enqueueCancelOrderCommand, enqueuePlaceOrderCommand } from "./order.producer.js";
 import { db, type DbTransactionClient } from "../../packages/db/client.js";
 import { ValidationError } from "../../packages/errors/index.js";
 import type { Order } from "../../packages/types/index.js";
 import { parseMarketAssets } from "../../packages/utils/parseMarketAssets.js";
 
+const ACTIVE_ORDER_STATUSES = ["OPEN", "PARTIALLY_FILLED"] as const;
 const isQuoteWalletAsset = (asset: string) => ["USDT", "USD", "DEV"].includes(asset);
 
 export const placeOrderService = async (order: Order) => {
@@ -17,87 +18,77 @@ export const placeOrderService = async (order: Order) => {
     throw new ValidationError("Order value must be greater than 0");
   }
 
-  try {
+  await db.$transaction(async (tx: DbTransactionClient) => {
     const { base, quote } = parseMarketAssets(order.symbol);
 
-    await db.$transaction(async (tx: DbTransactionClient) => {
-      if (order.side === "buy") {
-        if (!isQuoteWalletAsset(quote)) {
-          throw new ValidationError(`Unsupported quote asset ${quote}`);
-        }
-
-        const walletDebit = await tx.user.updateMany({
-          where: {
-            id: order.userId,
-            balance: {
-              gte: orderValue,
-            },
-          },
-          data: {
-            balance: {
-              decrement: orderValue,
-            },
-          },
-        });
-
-        if (walletDebit.count !== 1) {
-          throw new ValidationError("Insufficient wallet balance");
-        }
-      } else {
-        const assetLock = await tx.assetBalance.updateMany({
-          where: {
-            userId: order.userId,
-            asset: base,
-            free: {
-              gte: order.quantity,
-            },
-          },
-          data: {
-            free: {
-              decrement: order.quantity,
-            },
-            locked: {
-              increment: order.quantity,
-            },
-          },
-        });
-
-        if (assetLock.count !== 1) {
-          throw new ValidationError(`Insufficient ${base} balance`);
-        }
+    if (order.side === "buy") {
+      if (!isQuoteWalletAsset(quote)) {
+        throw new ValidationError(`Unsupported quote asset ${quote}`);
       }
 
-      await tx.order.create({
+      const walletDebit = await tx.user.updateMany({
+        where: {
+          id: order.userId,
+          balance: {
+            gte: orderValue,
+          },
+        },
         data: {
-          id: order.id,
-          userId: order.userId,
-          symbol: order.symbol,
-          price: order.price ?? null,
-          quantity: order.quantity,
-          remaining: order.quantity,
-          lockedQuote: order.side === "buy" ? orderValue : 0,
-          lockedBase: order.side === "sell" ? order.quantity : 0,
-          side: order.side,
-          type: order.type,
-          status: "OPEN",
+          balance: {
+            decrement: orderValue,
+          },
         },
       });
-    });
 
-    await sendOrderToEngine(order);
-  } catch (err) {
-    const existing = await db.order.findUnique({ where: { id: order.id } });
+      if (walletDebit.count !== 1) {
+        throw new ValidationError("Insufficient wallet balance");
+      }
+    } else {
+      const assetLock = await tx.assetBalance.updateMany({
+        where: {
+          userId: order.userId,
+          asset: base,
+          free: {
+            gte: order.quantity,
+          },
+        },
+        data: {
+          free: {
+            decrement: order.quantity,
+          },
+          locked: {
+            increment: order.quantity,
+          },
+        },
+      });
 
-    if (existing?.status === "OPEN") {
-      await refundOpenOrder(existing.id);
+      if (assetLock.count !== 1) {
+        throw new ValidationError(`Insufficient ${base} balance`);
+      }
     }
 
-    throw err;
-  }
+    await tx.order.create({
+      data: {
+        id: order.id,
+        userId: order.userId,
+        symbol: order.symbol,
+        price: order.price ?? null,
+        quantity: order.quantity,
+        remaining: order.quantity,
+        lockedQuote: order.side === "buy" ? orderValue : 0,
+        lockedBase: order.side === "sell" ? order.quantity : 0,
+        side: order.side,
+        type: order.type,
+        status: "OPEN",
+      },
+    });
+
+    await enqueuePlaceOrderCommand(tx, order);
+  });
 
   return {
     success: true,
-    message: "Order sent to engine",
+    message: "Order accepted",
   };
 };
 
@@ -114,125 +105,46 @@ export const cancelOrderService = async (input: {
       throw new ValidationError("Order not found");
     }
 
-    if (!["OPEN", "PARTIALLY_FILLED"].includes(order.status)) {
+    if (order.status === "CANCEL_PENDING") {
+      return {
+        order,
+        refunded: 0,
+      };
+    }
+
+    if (!ACTIVE_ORDER_STATUSES.includes(order.status as (typeof ACTIVE_ORDER_STATUSES)[number])) {
       throw new ValidationError("Only open orders can be cancelled");
     }
 
-    const { base, quote } = parseMarketAssets(order.symbol);
-    const refundedQuote = Number(order.lockedQuote || 0);
-    const refundedBase = Number(order.lockedBase || 0);
-
-    await tx.order.update({
-      where: { id: order.id },
+    const updated = await tx.order.updateMany({
+      where: {
+        id: order.id,
+        userId: input.userId,
+        status: {
+          in: [...ACTIVE_ORDER_STATUSES],
+        },
+      },
       data: {
-        status: "CANCELLED",
-        lockedQuote: 0,
-        lockedBase: 0,
+        status: "CANCEL_PENDING",
       },
     });
 
-    if (order.side.toLowerCase() === "buy" && refundedQuote > 0) {
-      if (!isQuoteWalletAsset(quote)) {
-        throw new ValidationError(`Unsupported quote asset ${quote}`);
-      }
-
-      await tx.user.update({
-        where: { id: input.userId },
-        data: {
-          balance: {
-            increment: refundedQuote,
-          },
-        },
-      });
+    if (updated.count !== 1) {
+      throw new ValidationError("Order changed before cancellation could be requested");
     }
 
-    if (order.side.toLowerCase() === "sell" && refundedBase > 0) {
-      await tx.assetBalance.upsert({
-        where: {
-          userId_asset: {
-            userId: input.userId,
-            asset: base,
-          },
-        },
-        create: {
-          userId: input.userId,
-          asset: base,
-          free: refundedBase,
-          locked: 0,
-        },
-        update: {
-          free: {
-            increment: refundedBase,
-          },
-          locked: {
-            decrement: refundedBase,
-          },
-        },
-      });
-    }
+    await enqueueCancelOrderCommand(tx, {
+      orderId: order.id,
+      symbol: order.symbol,
+      userId: input.userId,
+    });
 
     return {
-      order,
-      refunded: order.side.toLowerCase() === "buy" ? refundedQuote : refundedBase,
-    };
-  });
-};
-
-const refundOpenOrder = async (orderId: string) => {
-  await db.$transaction(async (tx: DbTransactionClient) => {
-    const order = await tx.order.findUnique({ where: { id: orderId } });
-    if (!order || !["OPEN", "PARTIALLY_FILLED"].includes(order.status)) return;
-
-    const { base, quote } = parseMarketAssets(order.symbol);
-    const side = order.side.toLowerCase();
-
-    await tx.order.update({
-      where: { id: order.id },
-      data: {
-        status: "CANCELLED",
-        lockedQuote: 0,
-        lockedBase: 0,
+      order: {
+        ...order,
+        status: "CANCEL_PENDING",
       },
-    });
-
-    if (side === "buy" && order.lockedQuote > 0) {
-      if (!isQuoteWalletAsset(quote)) {
-        throw new ValidationError(`Unsupported quote asset ${quote}`);
-      }
-
-      await tx.user.update({
-        where: { id: order.userId },
-        data: {
-          balance: {
-            increment: order.lockedQuote,
-          },
-        },
-      });
-    }
-
-    if (side === "sell" && order.lockedBase > 0) {
-      await tx.assetBalance.upsert({
-        where: {
-          userId_asset: {
-            userId: order.userId,
-            asset: base,
-          },
-        },
-        create: {
-          userId: order.userId,
-          asset: base,
-          free: order.lockedBase,
-          locked: 0,
-        },
-        update: {
-          free: {
-            increment: order.lockedBase,
-          },
-          locked: {
-            decrement: order.lockedBase,
-          },
-        },
-      });
-    }
+      refunded: 0,
+    };
   });
 };

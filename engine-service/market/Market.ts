@@ -29,8 +29,12 @@ export class Market {
     return result;
   }
 
-  cancelOrder(orderId: number): boolean {
+  cancelOrder(orderId: string): boolean {
     return this.orderBook.removeOrder(orderId);
+  }
+
+  hasOrder(orderId: string): boolean {
+    return this.orderBook.hasOrder(orderId);
   }
 
   getOrderBook() {

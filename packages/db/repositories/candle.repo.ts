@@ -1,4 +1,5 @@
 import { db } from "../index.js";
+import { toNumber } from "../../utils/decimal.js";
 
 export type CandleInterval = "1m" | "5m" | "15m" | "1h";
 
@@ -76,11 +77,11 @@ export const getCandles = async ({
     symbol: candle.symbol,
     interval: candle.interval as CandleInterval,
     bucket: candle.bucket.getTime(),
-    open: candle.open,
-    high: candle.high,
-    low: candle.low,
-    close: candle.close,
-    volume: candle.volume,
+    open: toNumber(candle.open),
+    high: toNumber(candle.high),
+    low: toNumber(candle.low),
+    close: toNumber(candle.close),
+    volume: toNumber(candle.volume),
   }));
 };
 

@@ -35,21 +35,10 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   loadActivity: async () => {
     try {
       set({ loading: true, error: "", userId: readUserId() });
-      const token = localStorage.getItem("token") || "";
-
-      if (!token) {
-        set({
-          orders: [],
-          trades: [],
-          loading: false,
-          error: "Login to view trading activity.",
-        });
-        return;
-      }
 
       const [ordersResult, tradesResult] = await Promise.all([
-        getOpenOrders(token),
-        getTradeHistory(token),
+        getOpenOrders(),
+        getTradeHistory(),
       ]);
 
       set({
@@ -67,8 +56,7 @@ export const useActivityStore = create<ActivityState>((set, get) => ({
   cancelOrderById: async (orderId) => {
     try {
       set({ cancelingOrderId: orderId, error: "" });
-      const token = localStorage.getItem("token") || "";
-      await cancelOrder(token, orderId);
+      await cancelOrder(orderId);
       set({
         orders: get().orders.filter((order) => order.id !== orderId),
         cancelingOrderId: "",
