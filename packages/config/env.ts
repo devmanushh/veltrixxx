@@ -45,6 +45,11 @@ const valueOrDefault = (value: string | undefined, fallback: string) => {
   return trimmed ? trimmed : fallback;
 };
 
+const urlOrDefault = (value: string | undefined, fallback: string) => {
+  const firstValue = valueOrDefault(value, fallback).split(",")[0]?.trim();
+  return (firstValue || fallback).replace(/\/+$/, "");
+};
+
 export const ENV = {
   NODE_ENV: process.env.NODE_ENV ?? "development",
 
@@ -55,7 +60,7 @@ export const ENV = {
 
   API_PORT: Number(process.env.API_PORT ?? process.env.PORT ?? 4000),
 
-  APP_URL: valueOrDefault(process.env.APP_URL, "http://localhost:3000"),
+  APP_URL: urlOrDefault(process.env.APP_URL, "http://localhost:3000"),
   STRIPE_SECRET_KEY: valueOrDefault(process.env.STRIPE_SECRET_KEY, ""),
   STRIPE_PUBLISHABLE_KEY: valueOrDefault(process.env.STRIPE_PUBLISHABLE_KEY, ""),
   STRIPE_WEBHOOK_SECRET: valueOrDefault(process.env.STRIPE_WEBHOOK_SECRET, ""),
