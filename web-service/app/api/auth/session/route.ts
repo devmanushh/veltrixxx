@@ -37,6 +37,15 @@ export async function POST(request: Request) {
   return response;
 }
 
+export async function GET(request: Request) {
+  const cookieHeader = request.headers.get("cookie") || "";
+  const authenticated = cookieHeader
+    .split(";")
+    .some((cookie) => cookie.trim().startsWith(`${COOKIE_NAME}=`));
+
+  return NextResponse.json({ authenticated });
+}
+
 export async function DELETE(request: Request) {
   const response = NextResponse.json({ success: true });
   response.cookies.set(COOKIE_NAME, "", {

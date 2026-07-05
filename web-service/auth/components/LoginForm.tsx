@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { getSafeAuthRedirect, setAuthSession } from "@/auth/lib/auth";
+import { getSafeAuthRedirect, setAuthSession, waitForAuthSession } from "@/auth/lib/auth";
 import { loginUser } from "@/lib/api";
 import { routes } from "@/routes";
 
@@ -23,6 +23,7 @@ export default function LoginForm() {
 
       localStorage.setItem("user", JSON.stringify(data.user));
       await setAuthSession(data.token);
+      await waitForAuthSession();
       toast.success("Signed in");
 
       const params = new URLSearchParams(window.location.search);
