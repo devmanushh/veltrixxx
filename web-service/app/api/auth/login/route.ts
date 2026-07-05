@@ -38,15 +38,21 @@ const readBody = async (request: Request) => {
 };
 
 const errorResponse = (request: Request, message: string, status: number, next: string, formRequest: boolean) => {
-  if (!formRequest) {
-    return NextResponse.json({ error: message }, { status });
-  }
+  const response = formRequest
+    ? (() => {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("next", next);
+        loginUrl.searchParams.set("error", message);
+        return NextResponse.redirect(loginUrl, { status: 303 });
+      })()
+    : NextResponse.json({ error: message }, { status });
 
-  const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("next", next);
-  loginUrl.searchParams.set("error", message);
+  response.cookies.set(COOKIE_NAME, "", {
+    ...sessionCookieOptions(request),
+    maxAge: 0,
+  });
 
-  return NextResponse.redirect(loginUrl, { status: 303 });
+  return response;
 };
 
 export async function POST(request: Request) {
@@ -98,4 +104,3 @@ export async function POST(request: Request) {
 
   return response;
 }
-

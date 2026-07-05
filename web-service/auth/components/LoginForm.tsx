@@ -1,79 +1,51 @@
-"use client";
+type LoginFormProps = {
+  nextPath: string;
+  error?: string;
+};
 
-import { useState } from "react";
-import { toast } from "sonner";
-import { getSafeAuthRedirect } from "@/auth/lib/auth";
-import { loginUser } from "@/lib/api";
-import { routes } from "@/routes";
-
-export default function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const next = params.get("next");
-      const destination = getSafeAuthRedirect(next, routes.spot);
-      const data = await loginUser(email, password, destination);
-
-      localStorage.setItem("user", JSON.stringify(data.user));
-      toast.success("Signed in");
-      window.location.assign(data.redirectTo || destination);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
-      setError(message);
-      toast.error("Login failed", { description: message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+export default function LoginForm({ nextPath, error = "" }: LoginFormProps) {
   return (
     <form
-      onSubmit={handleSubmit}
+      action="/api/auth/login"
+      method="post"
       className="glass-panel auth-card"
     >
       <h1 className="auth-title">Login</h1>
 
       <p className="section-copy">&ldquo;Markets move fast. So should you.&rdquo;</p>
 
+      <input type="hidden" name="next" value={nextPath} />
+
       <input
         type="email"
+        name="email"
         placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        required
+        autoComplete="email"
         className="form-input auth-input"
       />
 
       <input
         type="password"
+        name="password"
         placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        required
+        autoComplete="current-password"
         className="form-input auth-input"
       />
 
       <button
         type="submit"
-        disabled={loading}
         className="primary-button"
       >
-        {loading ? "Logging in..." : "Login"}
+        Login
       </button>
 
       {error && <p className="text-danger">{error}</p>}
 
       <p className="text-muted">
         Don&apos;t have an account?{" "}
-        <a href="/register" className="text-success">
+        <a href={`/register?next=${encodeURIComponent(nextPath)}`} className="text-success">
           Register
         </a>
       </p>
