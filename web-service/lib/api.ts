@@ -16,6 +16,7 @@ export type OrderInput = {
 
 export type AuthResponse = {
   token: string;
+  redirectTo?: string;
   user: {
     id: string;
     email: string;
@@ -122,15 +123,18 @@ const jsonHeaders = (token?: string): Record<string, string> => ({
 /**
  * LOGIN USER
  */
-export const loginUser = async (email: string, password: string) => {
+export const loginUser = async (email: string, password: string, next?: string) => {
   try {
-    const res = await fetch(`${API_URL}/auth/login`, {
+    const params = next
+      ? `?${new URLSearchParams({ next }).toString()}`
+      : "";
+    const res = await fetch(`/api/auth/login${params}`, {
       method: "POST",
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, next }),
     });
 
     return parseJsonResponse<AuthResponse>(res, "Login failed");

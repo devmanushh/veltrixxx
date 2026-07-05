@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { getSafeAuthRedirect, setAuthSession, waitForAuthSession } from "@/auth/lib/auth";
+import { getSafeAuthRedirect } from "@/auth/lib/auth";
 import { loginUser } from "@/lib/api";
 import { routes } from "@/routes";
 
@@ -19,18 +19,14 @@ export default function LoginForm() {
     setError("");
 
     try {
-      const data = await loginUser(email, password);
-
-      localStorage.setItem("user", JSON.stringify(data.user));
-      await setAuthSession(data.token);
-      await waitForAuthSession();
-      toast.success("Signed in");
-
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
       const destination = getSafeAuthRedirect(next, routes.spot);
+      const data = await loginUser(email, password, destination);
 
-      window.location.assign(destination);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      toast.success("Signed in");
+      window.location.assign(data.redirectTo || destination);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       setError(message);
