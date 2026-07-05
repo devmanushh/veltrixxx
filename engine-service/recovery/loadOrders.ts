@@ -4,13 +4,24 @@ import { Order } from "../matching/Order.js";
 
 type DbOrder = Awaited<ReturnType<typeof db.order.findMany>>[number];
 
-export const loadOpenOrders = async (): Promise<Order[]> => {
+export const loadOpenOrders = async (input: { olderThanMs?: number } = {}): Promise<Order[]> => {
+  const where: {
+    status: { in: string[] };
+    createdAt?: { lte: Date };
+  } = {
+    status: {
+      in: ["OPEN", "PARTIALLY_FILLED"],
+    },
+  };
+
+  if (input.olderThanMs && input.olderThanMs > 0) {
+    where.createdAt = {
+      lte: new Date(Date.now() - input.olderThanMs),
+    };
+  }
+
   const orders = await db.order.findMany({
-    where: {
-      status: {
-        in: ["OPEN", "PARTIALLY_FILLED"],
-      },
-    }
+    where,
   });
 
   return orders.map(

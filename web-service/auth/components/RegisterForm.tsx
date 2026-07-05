@@ -1,23 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { clearAuthSession, setAuthSession } from "@/auth/lib/auth";
+import { getSafeAuthRedirect, setAuthSession } from "@/auth/lib/auth";
 import { registerUser } from "@/lib/api";
 import { routes } from "@/routes";
 
 export default function RegisterForm() {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    void clearAuthSession();
-  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +27,9 @@ export default function RegisterForm() {
 
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
+      const destination = getSafeAuthRedirect(next, routes.spot);
 
-      router.push(next && next.startsWith("/") ? next : routes.spot);
-      router.refresh();
+      window.location.assign(destination);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Registration failed";
       setError(message);

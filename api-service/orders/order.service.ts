@@ -3,6 +3,7 @@ import { db, type DbTransactionClient } from "../../packages/db/client.js";
 import { ValidationError } from "../../packages/errors/index.js";
 import type { Order } from "../../packages/types/index.js";
 import { parseMarketAssets } from "../../packages/utils/parseMarketAssets.js";
+import { toDecimalString, toNumber } from "../../packages/utils/decimal.js";
 
 const ACTIVE_ORDER_STATUSES = ["OPEN", "PARTIALLY_FILLED"] as const;
 const isQuoteWalletAsset = (asset: string) => ["USDT", "USD", "DEV"].includes(asset);
@@ -12,9 +13,11 @@ export const placeOrderService = async (order: Order) => {
     throw new ValidationError("Market orders require a live price source before they can be enabled");
   }
 
-  const orderValue = Number(order.price || 0) * Number(order.quantity || 0);
+  const orderPrice = toDecimalString(order.price ?? 0);
+  const orderQuantity = toDecimalString(order.quantity);
+  const orderValue = toDecimalString(toNumber(orderPrice) * toNumber(orderQuantity));
 
-  if (!Number.isFinite(orderValue) || orderValue <= 0) {
+  if (toNumber(orderValue) <= 0) {
     throw new ValidationError("Order value must be greater than 0");
   }
 
@@ -49,15 +52,15 @@ export const placeOrderService = async (order: Order) => {
           userId: order.userId,
           asset: base,
           free: {
-            gte: order.quantity,
+            gte: orderQuantity,
           },
         },
         data: {
           free: {
-            decrement: order.quantity,
+            decrement: orderQuantity,
           },
           locked: {
-            increment: order.quantity,
+            increment: orderQuantity,
           },
         },
       });
@@ -72,11 +75,11 @@ export const placeOrderService = async (order: Order) => {
         id: order.id,
         userId: order.userId,
         symbol: order.symbol,
-        price: order.price ?? null,
-        quantity: order.quantity,
-        remaining: order.quantity,
+        price: order.price === null || order.price === undefined ? null : orderPrice,
+        quantity: orderQuantity,
+        remaining: orderQuantity,
         lockedQuote: order.side === "buy" ? orderValue : 0,
-        lockedBase: order.side === "sell" ? order.quantity : 0,
+        lockedBase: order.side === "sell" ? orderQuantity : 0,
         side: order.side,
         type: order.type,
         status: "OPEN",

@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { getMarketCandles } from "@/lib/api";
+import { getMarketCandles, getMarketTrades } from "@/lib/api";
 import { connectWS, type OrderBookLevel, type TradeTapeItem } from "@/trading/lib/websocket";
 import type { Candle, CandleInterval } from "@/trading/types/trading.types";
 
@@ -25,6 +25,7 @@ type LiveMarketState = {
   subscribe: (symbol: string) => void;
   unsubscribe: (symbol: string) => void;
   loadCandles: (symbol: string, interval: CandleInterval) => Promise<void>;
+  loadTrades: (symbol: string) => Promise<void>;
   getReferencePrice: (symbol: string) => number | null;
 };
 
@@ -55,6 +56,18 @@ const mergeCandles = (current: Candle[], incoming: Candle[]) => {
   return Array.from(next.values()).sort((a, b) => a.bucket - b.bucket).slice(-2000);
 };
 
+const mergeTrades = (current: TradeTapeItem[], incoming: TradeTapeItem[]) => {
+  const next = new Map<string, TradeTapeItem>();
+
+  for (const trade of [...incoming, ...current]) {
+    next.set(String(trade.id), trade);
+  }
+
+  return Array.from(next.values())
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 50);
+};
+
 export const useLiveMarketStore = create<LiveMarketState>((set, get) => ({
   orderBooks: {},
   trades: {},
@@ -66,6 +79,16 @@ export const useLiveMarketStore = create<LiveMarketState>((set, get) => ({
       candles: {
         ...state.candles,
         [symbol]: mergeCandles(state.candles[symbol] || EMPTY_CANDLES, candles),
+      },
+    }));
+  },
+  loadTrades: async (symbol) => {
+    const { trades } = await getMarketTrades(symbol, 50);
+
+    set((state) => ({
+      trades: {
+        ...state.trades,
+        [symbol]: mergeTrades(state.trades[symbol] || EMPTY_TRADES, trades),
       },
     }));
   },
@@ -111,7 +134,7 @@ export const useLiveMarketStore = create<LiveMarketState>((set, get) => ({
         set((state) => ({
           trades: {
             ...state.trades,
-            [symbol]: message.data || [],
+            [symbol]: mergeTrades(state.trades[symbol] || EMPTY_TRADES, message.data || []),
           },
         }));
       }
@@ -120,7 +143,7 @@ export const useLiveMarketStore = create<LiveMarketState>((set, get) => ({
         set((state) => ({
           trades: {
             ...state.trades,
-            [symbol]: [message.data, ...(state.trades[symbol] || [])].slice(0, 50),
+            [symbol]: mergeTrades(state.trades[symbol] || EMPTY_TRADES, [message.data]),
           },
         }));
       }

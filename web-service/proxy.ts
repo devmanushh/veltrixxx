@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { protectedRoutes, routes } from "@/routes";
 
-const JWT_SECRET = process.env.JWT_SECRET || "";
+const JWT_SECRET = process.env.JWT_SECRET || "veltrix-secret";
 
+const isSecureRequest = (request: NextRequest) => {
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+
+  if (forwardedProto) {
+    return forwardedProto === "https";
+  }
+
+  return request.nextUrl.protocol === "https:";
+};
 const base64UrlToBytes = (value: string) => {
   const padded = `${value}${"=".repeat((4 - (value.length % 4)) % 4)}`;
   const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
@@ -70,10 +79,13 @@ export async function proxy(request: NextRequest) {
   const valid = await verifyJwt(token).catch(() => false);
 
   if (!valid) {
-    const response = NextResponse.redirect(new URL(routes.login, request.url));
+    const loginUrl = new URL(routes.login, request.url);
+    loginUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+
+    const response = NextResponse.redirect(loginUrl);
     response.cookies.set("token", "", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureRequest(request),
       sameSite: "lax",
       path: "/",
       maxAge: 0,

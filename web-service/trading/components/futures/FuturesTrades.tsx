@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { EMPTY_TRADES, useLiveMarketStore } from "@/trading/stores/liveMarketStore";
 import { useSelectedMarket } from "@/trading/stores/marketStore";
+import type { TradeTapeItem } from "@/trading/lib/websocket";
 
 const formatPrice = (value: number) =>
   value.toLocaleString("en-US", {
@@ -14,6 +15,18 @@ const formatSize = (value: number) =>
   value.toLocaleString("en-US", {
     maximumFractionDigits: 8,
   });
+
+const sideLabel = (side: TradeTapeItem["side"]) => {
+  if (side === "BUY") return "Long";
+  if (side === "SELL") return "Short";
+  return "Match";
+};
+
+const sideClass = (side: TradeTapeItem["side"]) => {
+  if (side === "BUY") return "market-green";
+  if (side === "SELL") return "market-red";
+  return "text-muted";
+};
 
 export default function FuturesTrades() {
   const market = useSelectedMarket("futures");
@@ -39,11 +52,11 @@ export default function FuturesTrades() {
           key={`${market.symbol}-trade-${trade.id}`}
           className="trades-row text-strong"
         >
-          <span className={trade.side === "BUY" ? "market-green" : "market-red"}>
+          <span className={sideClass(trade.side)}>
             {formatPrice(trade.price)}
           </span>
           <span>{formatSize(trade.quantity)}</span>
-          <span>{trade.side === "BUY" ? "Long" : "Short"}</span>
+          <span>{sideLabel(trade.side)}</span>
         </div>
       ))}
     </div>

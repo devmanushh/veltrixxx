@@ -23,11 +23,11 @@ export type OrderBookDiffMessage = {
 };
 
 export type TradeTapeItem = {
-  id: number;
+  id: number | string;
   symbol: string;
   price: number;
   quantity: number;
-  side: "BUY" | "SELL";
+  side: "BUY" | "SELL" | "MATCH";
   timestamp: number;
 };
 

@@ -1,4 +1,5 @@
 import { Price, Quantity, Timestamp, MarketSymbol } from "./types.js";
+import { toDecimalNumber } from "../../packages/utils/decimal.js";
 
 export class Trade {
   public id: number;
@@ -41,8 +42,8 @@ export class Trade {
 
     this.symbol = params.symbol;
 
-    this.price = params.price;
-    this.quantity = params.quantity;
+    this.price = toDecimalNumber(params.price);
+    this.quantity = toDecimalNumber(params.quantity);
 
     this.buyerId = params.buyerId;
     this.sellerId = params.sellerId;
@@ -51,8 +52,8 @@ export class Trade {
     this.sellOrderId = params.sellOrderId;
     this.buyOrderDbId = params.buyOrderDbId;
     this.sellOrderDbId = params.sellOrderDbId;
-    this.buyOrderRemaining = params.buyOrderRemaining;
-    this.sellOrderRemaining = params.sellOrderRemaining;
+    this.buyOrderRemaining = toDecimalNumber(params.buyOrderRemaining);
+    this.sellOrderRemaining = toDecimalNumber(params.sellOrderRemaining);
     this.side = params.side;
 
     this.timestamp = params.timestamp;

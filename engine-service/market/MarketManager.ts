@@ -23,10 +23,10 @@ export class MarketManager {
   /**
    * Process incoming order
    */
-  process(order: Order): {
+  async process(order: Order): Promise<{
     trades: Trade[];
     remainingOrder: Order | null;
-  } {
+  }> {
     const market = this.getMarket(order.symbol);
 
     return market.processOrder(order);

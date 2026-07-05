@@ -29,11 +29,11 @@ const toEngineOrder = (incoming: IncomingOrder) => {
   });
 };
 
-export const processOrder = (incoming: IncomingOrder) => {
+export const processOrder = async (incoming: IncomingOrder) => {
   const order = toEngineOrder(incoming);
   addOrder(order);
 
-  const result = marketManager.process(order);
+  const result = await marketManager.process(order);
 
   return result;
 };

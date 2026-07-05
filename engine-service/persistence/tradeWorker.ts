@@ -3,7 +3,7 @@ import { db, type DbTransactionClient } from "../../packages/db/client.js";
 import { ENV } from "../../packages/config/env.js";
 import { ENGINE_EVENT_TYPES, GROUPS, STREAMS } from "../../packages/redis/channels.js";
 import { parseMarketAssets } from "../../packages/utils/parseMarketAssets.js";
-import { toNumber } from "../../packages/utils/decimal.js";
+import { toDecimalString, toNumber } from "../../packages/utils/decimal.js";
 import { eventBus } from "../events/eventEmitter.js";
 import { TRADE_EVENT, type TradeEventPayload } from "../events/tradeEvents.js";
 import { enqueueSettlement } from "./settlementQueue.js";
@@ -92,17 +92,26 @@ const readMessages = async (id: ">" | "0", blockMs?: number) => {
 
 const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => {
   const trade = typeof tradeInput === "string" ? JSON.parse(tradeInput) : tradeInput;
-  const buyOrderStatus = trade.buyOrderRemaining > 0 ? "PARTIALLY_FILLED" : "FILLED";
-  const sellOrderStatus = trade.sellOrderRemaining > 0 ? "PARTIALLY_FILLED" : "FILLED";
+  const tradeId = trade.id.toString();
+  const tradePrice = toDecimalString(trade.price);
+  const tradeQuantity = toDecimalString(trade.quantity);
+  const tradeQuantityNumber = toNumber(tradeQuantity);
+  const buyOrderRemaining = toDecimalString(trade.buyOrderRemaining);
+  const sellOrderRemaining = toDecimalString(trade.sellOrderRemaining);
+  const buyOrderStatus = toNumber(buyOrderRemaining) > 0 ? "PARTIALLY_FILLED" : "FILLED";
+  const sellOrderStatus = toNumber(sellOrderRemaining) > 0 ? "PARTIALLY_FILLED" : "FILLED";
   const { base } = parseMarketAssets(trade.symbol);
-  const cost = Number(trade.price) * Number(trade.quantity);
+  const cost = toDecimalString(toNumber(tradePrice) * tradeQuantityNumber);
+  const costNumber = toNumber(cost);
 
-  await db.$transaction(async (tx: DbTransactionClient) => {
+  const saved = await db.$transaction(async (tx: DbTransactionClient) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('veltrix_trade'), hashtext(${tradeId}))`;
+
     const existingTrade = await tx.trade.findUnique({
-      where: { id: trade.id.toString() },
+      where: { id: tradeId },
     });
 
-    if (existingTrade) return;
+    if (existingTrade) return false;
 
     const [buyOrder, sellOrder] = await Promise.all([
       tx.order.findUnique({ where: { id: trade.buyOrderDbId } }),
@@ -117,9 +126,9 @@ const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => 
       throw new Error("Matched order was cancelled before settlement");
     }
 
-    const nextBuyLockedQuote = Math.max(toNumber(buyOrder.lockedQuote) - cost, 0);
-    const buyRefund = trade.buyOrderRemaining > 0 ? 0 : nextBuyLockedQuote;
-    const nextSellLockedBase = Math.max(toNumber(sellOrder.lockedBase) - Number(trade.quantity), 0);
+    const nextBuyLockedQuote = toDecimalString(Math.max(toNumber(buyOrder.lockedQuote) - costNumber, 0));
+    const buyRefund = toNumber(buyOrderRemaining) > 0 ? "0" : nextBuyLockedQuote;
+    const nextSellLockedBase = toDecimalString(Math.max(toNumber(sellOrder.lockedBase) - tradeQuantityNumber, 0));
 
     const buyOrderUpdate = await tx.order.updateMany({
       where: {
@@ -130,8 +139,8 @@ const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => 
       },
       data: {
         status: buyOrderStatus,
-        remaining: trade.buyOrderRemaining,
-        lockedQuote: trade.buyOrderRemaining > 0 ? nextBuyLockedQuote : 0,
+        remaining: buyOrderRemaining,
+        lockedQuote: toNumber(buyOrderRemaining) > 0 ? nextBuyLockedQuote : "0",
       },
     });
 
@@ -144,7 +153,7 @@ const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => 
       },
       data: {
         status: sellOrderStatus,
-        remaining: trade.sellOrderRemaining,
+        remaining: sellOrderRemaining,
         lockedBase: nextSellLockedBase,
       },
     });
@@ -155,17 +164,17 @@ const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => 
 
     await tx.trade.create({
       data: {
-        id: trade.id.toString(),
+        id: tradeId,
         buyerId: trade.buyerId,
         sellerId: trade.sellerId,
         symbol: trade.symbol,
-        price: trade.price,
-        quantity: trade.quantity,
+        price: tradePrice,
+        quantity: tradeQuantity,
         createdAt: new Date(trade.timestamp),
       },
     });
 
-    if (buyRefund > 0) {
+    if (toNumber(buyRefund) > 0) {
       await tx.user.update({
         where: { id: trade.buyerId },
         data: {
@@ -186,12 +195,12 @@ const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => 
       create: {
         userId: trade.buyerId,
         asset: base,
-        free: trade.quantity,
+        free: tradeQuantity,
         locked: 0,
       },
       update: {
         free: {
-          increment: trade.quantity,
+          increment: tradeQuantity,
         },
       },
     });
@@ -201,12 +210,12 @@ const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => 
         userId: trade.sellerId,
         asset: base,
         locked: {
-          gte: trade.quantity,
+          gte: tradeQuantity,
         },
       },
       data: {
         locked: {
-          decrement: trade.quantity,
+          decrement: tradeQuantity,
         },
       },
     });
@@ -223,9 +232,13 @@ const persistTrade = async (tradeInput: string | TradeEventPayload["trade"]) => 
         },
       },
     });
+
+    return true;
   });
 
-  console.log("Trade saved:", trade.id);
+  if (saved) {
+    console.log("Trade saved:", trade.id);
+  }
 };
 
 const persistStreamMessage = async (message: StreamMessage) => {
@@ -286,10 +299,9 @@ export const startTradeWorker = async () => {
     console.warn("Redis is unavailable; trade persistence stream worker is paused.");
   }
 };
-
-eventBus.on<TradeEventPayload>(TRADE_EVENT, ({ trade }) => {
-  void enqueueSettlement(() => persistTrade(trade)).catch((err) => {
+eventBus.on<TradeEventPayload>(TRADE_EVENT, ({ trade }) =>
+  enqueueSettlement(() => persistTrade(trade)).catch((err) => {
     const message = err instanceof Error ? err.message : "unknown error";
     console.error("Trade persist error:", message);
-  });
-});
+  })
+);

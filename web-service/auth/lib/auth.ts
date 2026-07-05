@@ -1,3 +1,11 @@
+export const getSafeAuthRedirect = (value: string | null, fallback: string) => {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return fallback;
+  }
+
+  return value;
+};
+
 export const setAuthSession = async (token: string) => {
   const res = await fetch("/api/auth/session", {
     method: "POST",

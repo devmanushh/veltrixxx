@@ -3,6 +3,23 @@ import { NextResponse } from "next/server";
 const COOKIE_NAME = "token";
 const SESSION_MAX_AGE_SECONDS = 24 * 60 * 60;
 
+const isSecureRequest = (request: Request) => {
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+
+  if (forwardedProto) {
+    return forwardedProto === "https";
+  }
+
+  return new URL(request.url).protocol === "https:";
+};
+
+const sessionCookieOptions = (request: Request) => ({
+  httpOnly: true,
+  secure: isSecureRequest(request),
+  sameSite: "lax" as const,
+  path: "/",
+});
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const token = typeof body.token === "string" ? body.token : "";
@@ -13,23 +30,17 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({ success: true });
   response.cookies.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
+    ...sessionCookieOptions(request),
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
 
   return response;
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const response = NextResponse.json({ success: true });
   response.cookies.set(COOKIE_NAME, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
+    ...sessionCookieOptions(request),
     maxAge: 0,
   });
 

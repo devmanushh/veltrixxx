@@ -2,6 +2,7 @@ import { getOrderEndpointPath, normalizeMarketApiSymbol, type MarketKind } from 
 import { clearAuthSession } from "@/auth/lib/auth";
 import type { Wallet } from "@/wallet/stores/walletStore";
 import type { Candle, CandleInterval, MarketSessionStats, OrderRow, TradeRow } from "@/trading/types/trading.types";
+import type { TradeTapeItem } from "@/trading/lib/websocket";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
@@ -46,6 +47,10 @@ export type CandlesResponse = {
 
 export type MarketStatsResponse = {
   stats: MarketSessionStats[];
+};
+
+export type MarketTradesResponse = {
+  trades: TradeTapeItem[];
 };
 
 export type StripeCheckoutResponse = {
@@ -220,6 +225,15 @@ export const getMarketCandles = async (
   const res = await fetch(`${API_URL}/market/${encodeURIComponent(symbol)}/candles?${params.toString()}`);
 
   return parseJsonResponse<CandlesResponse>(res, "Candles failed");
+};
+
+export const getMarketTrades = async (symbol: string, limit = 50) => {
+  const params = new URLSearchParams({
+    limit: String(limit),
+  });
+  const res = await fetch(`${API_URL}/market/${encodeURIComponent(symbol)}/trades?${params.toString()}`);
+
+  return parseJsonResponse<MarketTradesResponse>(res, "Market trades failed");
 };
 
 export const getMarketStats = async (symbols: string[]) => {

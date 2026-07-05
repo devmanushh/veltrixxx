@@ -138,7 +138,7 @@ const handlePlaceOrder = async (payload: IncomingOrder) => {
     return;
   }
 
-  processOrder({
+  await processOrder({
     id: persisted.id,
     userId: persisted.userId,
     symbol: persisted.symbol,

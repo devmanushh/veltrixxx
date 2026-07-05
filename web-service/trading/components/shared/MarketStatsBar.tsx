@@ -21,6 +21,7 @@ export default function MarketStatsBar({
   const subscribe = useLiveMarketStore((state) => state.subscribe);
   const unsubscribe = useLiveMarketStore((state) => state.unsubscribe);
   const loadCandles = useLiveMarketStore((state) => state.loadCandles);
+  const loadTrades = useLiveMarketStore((state) => state.loadTrades);
   const trades = useLiveMarketStore((state) => state.trades[selectedMarket.symbol]) || EMPTY_TRADES;
   const book = useLiveMarketStore((state) => state.orderBooks[selectedMarket.symbol]) || EMPTY_ORDER_BOOK;
   const candles = useLiveMarketStore((state) => state.candles[selectedMarket.symbol]) || EMPTY_CANDLES;
@@ -67,11 +68,12 @@ export default function MarketStatsBar({
   useEffect(() => {
     subscribe(selectedMarket.symbol);
     void loadCandles(selectedMarket.symbol, "1m");
+    void loadTrades(selectedMarket.symbol);
     void getMarketStats([selectedMarket.symbol]).then(({ stats }) => {
       setApiStats(stats.find((item) => item.symbol === selectedMarket.symbol) || null);
     });
     return () => unsubscribe(selectedMarket.symbol);
-  }, [loadCandles, selectedMarket.symbol, subscribe, unsubscribe]);
+  }, [loadCandles, loadTrades, selectedMarket.symbol, subscribe, unsubscribe]);
 
   const formatPrice = (value: number | null | undefined) =>
     typeof value === "number"

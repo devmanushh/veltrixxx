@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { MARKETS } from "../../packages/config/markets.js";
-import { getCandles, getSessionStats, type CandleInterval } from "../../packages/db/index.js";
+import { getCandles, getSessionStats, getTradesBySymbol, type CandleInterval } from "../../packages/db/index.js";
+import { toNumber } from "../../packages/utils/decimal.js";
 
 const intervals: CandleInterval[] = ["1m", "5m", "15m", "1h"];
 
@@ -16,6 +17,12 @@ const parseLimit = (value: unknown) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 500;
   return Math.min(Math.max(Math.floor(parsed), 1), 1000);
+};
+
+const parseTradeLimit = (value: unknown) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 50;
+  return Math.min(Math.max(Math.floor(parsed), 1), 100);
 };
 
 const parseSymbols = (value: unknown) => {
@@ -47,6 +54,27 @@ export const getMarketCandles = async (req: Request, res: Response) => {
   });
 
   return res.json({ candles });
+};
+
+export const getMarketTrades = async (req: Request, res: Response) => {
+  const symbol = String(req.params.symbol || "").toUpperCase();
+
+  if (!symbol) {
+    return res.status(400).json({ error: "Symbol is required" });
+  }
+
+  const trades = await getTradesBySymbol(symbol, parseTradeLimit(req.query.limit));
+
+  return res.json({
+    trades: trades.map((trade) => ({
+      id: trade.id,
+      symbol: trade.symbol,
+      price: toNumber(trade.price),
+      quantity: toNumber(trade.quantity),
+      side: "MATCH",
+      timestamp: trade.createdAt.getTime(),
+    })),
+  });
 };
 
 export const getMarketStats = async (req: Request, res: Response) => {

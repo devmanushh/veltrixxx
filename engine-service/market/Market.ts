@@ -17,14 +17,14 @@ export class Market {
     this.matcher = new MatchingEngine(this.orderBook);
   }
 
-  processOrder(order: Order) {
+  async processOrder(order: Order) {
     const result = this.matcher.process(order);
 
     for (const trade of result.trades) {
-      eventBus.emit(TRADE_EVENT, { trade });
+      await eventBus.emit(TRADE_EVENT, { trade });
     }
 
-    eventBus.emit(ORDER_EVENT, { order });
+    await eventBus.emit(ORDER_EVENT, { order });
 
     return result;
   }

@@ -7,6 +7,7 @@ import {
   Timestamp,
   MarketSymbol
 } from "./types.js";
+import { toDecimalNumber } from "../../packages/utils/decimal.js";
 
 export class Order {
   public id: string;
@@ -44,9 +45,9 @@ export class Order {
     this.side = params.side;
     this.type = params.type;
 
-    this.price = params.price ?? null;
-    this.quantity = params.quantity;
-    this.remaining = params.quantity;
+    this.price = params.price === null || params.price === undefined ? null : toDecimalNumber(params.price);
+    this.quantity = toDecimalNumber(params.quantity);
+    this.remaining = this.quantity;
 
     this.status = "OPEN";
 
@@ -62,11 +63,14 @@ export class Order {
   }
 
   fill(qty: Quantity) {
-    if (qty > this.remaining) {
+    const normalizedQty = toDecimalNumber(qty);
+    const normalizedRemaining = toDecimalNumber(this.remaining);
+
+    if (normalizedQty > normalizedRemaining) {
       throw new Error("Overfill attempt");
     }
 
-    this.remaining -= qty;
+    this.remaining = toDecimalNumber(normalizedRemaining - normalizedQty);
 
     if (this.remaining === 0) {
       this.status = "FILLED";
