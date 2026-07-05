@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { COOKIE_NAME, SESSION_MAX_AGE_SECONDS, sessionCookieOptions } from "../cookies";
 
-const API_URL = process.env.API_INTERNAL_URL || process.env.API_URL || "http://localhost:4000";
+const isVercel = Boolean(process.env.VERCEL);
+const DEFAULT_API_URL =
+  isVercel ? "https://veltrixxx-api.onrender.com" : "http://localhost:4000";
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  (isVercel ? process.env.API_INTERNAL_URL || process.env.API_URL : process.env.LOCAL_API_URL) ||
+  DEFAULT_API_URL
+).replace(/\/+$/, "");
 const DEFAULT_LOGIN_REDIRECT = "/spot/btcusdt";
 
 const getSafeRedirect = (value: FormDataEntryValue | string | null, fallback = DEFAULT_LOGIN_REDIRECT) => {

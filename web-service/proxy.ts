@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { protectedRoutes, routes } from "@/routes";
 
-const JWT_SECRET = process.env.JWT_SECRET || "veltrix-secret";
+const LOCAL_JWT_SECRET = process.env.VERCEL ? "" : "veltrix-secret";
+const JWT_SECRET = process.env.AUTH_JWT_SECRET || process.env.JWT_SECRET || LOCAL_JWT_SECRET;
+const isVercel = Boolean(process.env.VERCEL);
+const DEFAULT_API_URL =
+  isVercel ? "https://veltrixxx-api.onrender.com" : "http://localhost:4000";
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  (isVercel ? process.env.API_INTERNAL_URL || process.env.API_URL : process.env.LOCAL_API_URL) ||
+  DEFAULT_API_URL
+).replace(/\/+$/, "");
 
 const isSecureRequest = (request: NextRequest) => {
   const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
@@ -66,6 +75,35 @@ const verifyJwt = async (token: string) => {
   );
 };
 
+const verifyWithApi = async (token: string) => {
+  if (!token || !API_URL) {
+    return false;
+  }
+
+  const response = await fetch(`${API_URL}/wallet`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  return response.ok;
+};
+
+const verifyAuthToken = async (token: string) => {
+  if (!token) {
+    return false;
+  }
+
+  const locallyValid = await verifyJwt(token).catch(() => false);
+
+  if (locallyValid) {
+    return true;
+  }
+
+  return verifyWithApi(token).catch(() => false);
+};
+
 export async function proxy(request: NextRequest) {
   const token = request.cookies.get("token")?.value || "";
   const { pathname } = request.nextUrl;
@@ -76,7 +114,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const valid = await verifyJwt(token).catch(() => false);
+  const valid = await verifyAuthToken(token);
 
   if (!valid) {
     const loginUrl = new URL(routes.login, request.url);

@@ -15,6 +15,9 @@ export const EMPTY_ORDER_BOOK: OrderBookState = {
   asks: [],
 };
 
+const SPOT_ORDERBOOK_SIDE_LEVELS = 8;
+const MAX_TRADES_PER_SYMBOL = SPOT_ORDERBOOK_SIDE_LEVELS * 2 + 1;
+
 export const EMPTY_TRADES: TradeTapeItem[] = [];
 export const EMPTY_CANDLES: Candle[] = [];
 
@@ -65,7 +68,7 @@ const mergeTrades = (current: TradeTapeItem[], incoming: TradeTapeItem[]) => {
 
   return Array.from(next.values())
     .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 50);
+    .slice(0, MAX_TRADES_PER_SYMBOL);
 };
 
 export const useLiveMarketStore = create<LiveMarketState>((set, get) => ({
@@ -83,7 +86,7 @@ export const useLiveMarketStore = create<LiveMarketState>((set, get) => ({
     }));
   },
   loadTrades: async (symbol) => {
-    const { trades } = await getMarketTrades(symbol, 50);
+    const { trades } = await getMarketTrades(symbol, MAX_TRADES_PER_SYMBOL);
 
     set((state) => ({
       trades: {
